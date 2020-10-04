@@ -50,6 +50,9 @@ class HPacket:
     def __len__(self):
         return self.read_int(0)
 
+    def __str__(self):
+        return "(id:{}, length:{}) -> {}".format(self.headerId(), len(self), bytes(self))
+
     def is_corrupted(self):
         return len(self.bytearray) < 6 or self.read_int(0) != len(self.bytearray) - 4
 
@@ -127,30 +130,35 @@ class HPacket:
         self.is_edited = True
 
     def append_int(self, value):
-        self.bytearray = self.bytearray + value.to_bytes(4, byteorder='big')
+        self.bytearray.extend(value.to_bytes(4, byteorder='big'))
         self.fix_length()
         self.is_edited = True
+        return self
 
     def append_ushort(self, value):
-        self.bytearray = self.bytearray + value.to_bytes(2, byteorder='big', signed=False)
+        self.bytearray.extend(value.to_bytes(2, byteorder='big', signed=False))
         self.fix_length()
         self.is_edited = True
+        return self
 
     def append_bytes(self, value):
-        self.bytearray = self.bytearray + value
+        self.bytearray.extend(value)
         self.fix_length()
         self.is_edited = True
+        return self
 
     def append_bool(self, value):
         self.append_bytes(b'\x01' if value else b'\x00')
         self.fix_length()
         self.is_edited = True
+        return self
 
     def append_string(self, value, head=2, encoding='utf-8'):
         b = value.encode(encoding)
-        self.bytearray = self.bytearray + value.to_bytes(head, byteorder='big', signed=False) + b
+        self.bytearray.extend(value.to_bytes(head, byteorder='big', signed=False) + b)
         self.fix_length()
         self.is_edited = True
+        return self
 
 # packet = HPacket(None, 1231, "hi", 5, "old", False, True, "lol")
 #
