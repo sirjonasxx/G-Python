@@ -1,4 +1,140 @@
-
 class HPacket:
-    def __init__(self):
-        pass
+
+    def __init__(self, extension, header, *objects):
+        self.extension = extension
+        self.read_index = 6
+        self.bytearray = bytearray(b'\x00\x00\x00\x02\x00\xb0')
+        self.replace_ushort(4, header)
+
+        for object in objects:
+            if type(object) is str:
+                self.append_string(object)
+            if type(object) is int:
+                self.append_int(object)
+            if type(object) is bool:
+                self.append_bool(object)
+            if type(object) is bytes:
+                self.append_bytes(object)
+
+    # https://stackoverflow.com/questions/682504/what-is-a-clean-pythonic-way-to-have-multiple-constructors-in-python
+    @classmethod
+    def from_bytes(cls, extension, bytes):
+        obj = cls.__new__(cls)  # Does not call __init__
+        super(HPacket, obj).__init__()  # Don't forget to call any polymorphic base class initializers
+        obj.extension = extension
+        obj.bytearray = bytearray(bytes)
+        obj.read_index = 6
+        return obj
+
+    def __bytes__(self):
+        return bytes(self.bytearray)
+
+    def __len__(self):
+        return self.read_int(0)
+
+    def reset(self):
+        self.read_index = 6
+
+    def headerId(self):
+        return self.read_ushort(4)
+
+    def fix_length(self):
+        self.replace_int(0, len(self.bytearray) - 4)
+
+    def read_int(self, index=None):
+        if index is None:
+            index = self.read_index
+            self.read_index += 4
+
+        return int.from_bytes(self.bytearray[index:index + 4], byteorder='big')
+
+    def read_ushort(self, index=None):
+        if index is None:
+            index = self.read_index
+            self.read_index += 2
+
+        return int.from_bytes(self.bytearray[index:index + 2], byteorder='big', signed=False)
+
+    def read_string(self, index=None, head=2):
+        if index is None:
+            index = self.read_index
+            self.read_index += head + int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
+
+        len = int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
+        return self.bytearray[index + head:index + head + len].decode("utf-8")
+
+    def read_long_string(self, index=None):
+        return self.read_string(index, head=4)
+
+    def read_bytes(self, len, index=None):
+        if index is None:
+            index = self.read_index
+            self.read_index += len
+
+        return self.bytearray[index:index + len]
+
+    def read_byte(self, index=None):
+        if index is None:
+            index = self.read_index
+            self.read_index += 1
+
+        return self.bytearray[index]
+
+    def read_bool(self, index=None):
+        return self.read_byte(index) != 0
+
+    def replace_int(self, index, value):
+        self.bytearray[index:index + 4] = value.to_bytes(4, byteorder='big')
+
+    def replace_ushort(self, index, value):
+        self.bytearray[index:index + 2] = value.to_bytes(2, byteorder='big', signed=False)
+
+    def replace_bool(self, index, value):
+        self.bytearray[index] = value
+
+    def replace_string(self, index, value):
+        old_len = self.read_ushort(index)
+        part1 = self.bytearray[0:index]
+        part3 = self.bytearray[index + 2 + old_len:]
+
+        new_string = value.encode('utf-8')
+        new_len = len(new_string)
+        part2 = new_len.to_bytes(2, byteorder='big', signed=False) + new_string
+
+        self.bytearray = part1 + part2 + part3
+        self.fix_length()
+
+    def append_int(self, value):
+        self.bytearray = self.bytearray + value.to_bytes(4, byteorder='big')
+        self.fix_length()
+
+    def append_ushort(self, value):
+        self.bytearray = self.bytearray + value.to_bytes(2, byteorder='big', signed=False)
+        self.fix_length()
+
+    def append_bytes(self, value):
+        self.bytearray = self.bytearray + value
+        self.fix_length()
+
+    def append_bool(self, value):
+        self.append_bytes(b'\x01' if value else b'\x00')
+        self.fix_length()
+
+    def append_string(self, value):
+        b = value.encode('utf-8')
+        self.append_ushort(len(b))
+        self.append_bytes(b)
+        self.fix_length()
+
+
+# packet = HPacket(None, 1231, "hi", 5, "old", False, True, "lol")
+#
+# print(packet.read_string())
+# print(packet.read_int())
+# packet.replace_string(packet.read_index, "newstring")
+# print(packet.read_string())
+# print(packet.read_bool())
+# print(packet.read_bool())
+# print(packet.read_string())
+#
+# print(bytes(packet))
