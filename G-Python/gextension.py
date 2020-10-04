@@ -1,3 +1,4 @@
+import socket
 
 INCOMING_MESSAGES = {
     "ON_DOUBLE_CLICK": 1,
@@ -6,6 +7,8 @@ INCOMING_MESSAGES = {
     "FLAGS_CHECK": 4,
     "CONNECTION_START": 5,
     "CONNECTION_END": 6,
+    "PACKET_TO_STRING_RESPONSE": 20,
+    "STRING_TO_PACKET_RESPONSE": 21,
     "INIT": 7
 }
 
@@ -14,7 +17,9 @@ OUTGOING_MESSAGES = {
     "MANIPULATED_PACKET": 2,
     "REQUEST_FLAGS": 3,
     "SEND_MESSAGE": 4,
-    "EXTENSION_CONSOLE_LOG": 98     # don't ask
+    "PACKET_TO_STRING_REQUEST": 20,
+    "STRING_TO_PACKET_REQUEST": 21,
+    "EXTENSION_CONSOLE_LOG": 98
 }
 
 EXTENSION_SETTINGS_DEFAULT = {"use_click_trigger": False, "can_leave": True, "can_delete": True}
@@ -69,4 +74,7 @@ class Extension:
         self.cookie = cookie
         self.extension_settings = extension_settings
 
+
+        gearth = socket.socket()
+        gearth.connect(("127.0.0.1", self.port))
 
