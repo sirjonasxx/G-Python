@@ -19,7 +19,7 @@ class HMessage:
         obj = cls.__new__(cls)
         super(HMessage, obj).__init__()
 
-        split = string.split(' ', 3)
+        split = string.split('\t', 3)
         obj.is_blocked = split[0] == '1'
         obj.index = int(split[1])
         obj.direction = Direction.TO_CLIENT if split[2] == 'TOCLIENT' else Direction.TO_SERVER

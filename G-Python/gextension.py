@@ -3,6 +3,7 @@ import threading
 from time import sleep
 from enum import Enum
 from hpacket import HPacket
+from hmessage import HMessage
 
 
 class INCOMING_MESSAGES(Enum):
@@ -35,7 +36,7 @@ FILE_FLAG = ["--filename", "-f"]
 COOKIE_FLAG = ["--auth-token", "-c"]
 
 
-def fillSettings(settings, defaults):
+def fill_settings(settings, defaults):
     if settings is None:
         return defaults.copy()
 
@@ -47,7 +48,7 @@ def fillSettings(settings, defaults):
     return settings
 
 
-def getArgument(args, flags):
+def get_argument(args, flags):
     if type(flags) == str:
         flags = [flags]
 
@@ -62,18 +63,18 @@ def getArgument(args, flags):
 
 class Extension:
     def __init__(self, extension_info, args, extension_settings=None):
-        extension_settings = fillSettings(extension_settings, EXTENSION_SETTINGS_DEFAULT)
+        extension_settings = fill_settings(extension_settings, EXTENSION_SETTINGS_DEFAULT)
 
-        port = int(getArgument(args, PORT_FLAG))
-        file = getArgument(args, FILE_FLAG)
-        cookie = getArgument(args, COOKIE_FLAG)
+        if get_argument(args, PORT_FLAG) is None:
+            raise Exception('Port was not specified (argument example: -p 9092)')
 
         for key in EXTENSION_INFO_REQUIRED_FIELDS:
             if key not in extension_info:
                 raise Exception('Extension info error: {} field missing'.format(key))
 
-        if port is None:
-            raise Exception('Port was not specified (argument example: -p 9092)')
+        port = int(get_argument(args, PORT_FLAG))
+        file = get_argument(args, FILE_FLAG)
+        cookie = get_argument(args, COOKIE_FLAG)
 
         self.extension_info = extension_info
         self.port = port
@@ -81,6 +82,8 @@ class Extension:
         self.cookie = cookie
         self.extension_settings = extension_settings
         self.is_closed = True
+
+        self.connection_info = None
 
         self.stream_lock = threading.Lock()
 
@@ -107,10 +110,14 @@ class Extension:
             return HPacket.from_bytes(self, packet_buffer)
 
         while not self.is_closed:
-            packet = read_packet()
+            try:
+                packet = read_packet()
+            except:
+                return
+            print(packet)
 
-            if packet.headerId() == INCOMING_MESSAGES.INFO_REQUEST:
-                response = HPacket(self, OUTGOING_MESSAGES.EXTENSION_INFO)
+            if packet.headerId() == INCOMING_MESSAGES.INFO_REQUEST.value:
+                response = HPacket(self, OUTGOING_MESSAGES.EXTENSION_INFO.value)
                 response\
                     .append_string(self.extension_info['title'])\
                     .append_string(self.extension_info['author'])\
@@ -124,6 +131,44 @@ class Extension:
                     .append_bool(self.extension_settings['can_delete'])
 
                 self.send_to_stream(response)
+            elif packet.headerId() == INCOMING_MESSAGES.CONNECTION_START.value:
+                host = packet.read_string()
+                port = packet.read_int()
+                hotel_version = packet.read_string()
+                harble_messages_path = packet.read_string()
+                self.connection_info = {'host': host, 'port': port, 'hotel_version': hotel_version,
+                                        'harble_messages_path': harble_messages_path}
+
+                # callback
+            elif packet.headerId() == INCOMING_MESSAGES.CONNECTION_END.value:
+                # callback
+                self.connection_info = None
+            elif packet.headerId() == INCOMING_MESSAGES.FLAGS_CHECK.value:
+                size = packet.read_int()
+                flags = [packet.read_string() for _ in range(size)]
+                # callback
+            elif packet.headerId() == INCOMING_MESSAGES.INIT.value:
+                # callback
+                self.write_to_console(
+                    'G-Python extension "{}" sucessfully initialized'.format(self.extension_info['title']),
+                    'green',
+                    False
+                )
+            elif packet.headerId() == INCOMING_MESSAGES.ON_DOUBLE_CLICK.value:
+                # callback
+                pass
+            elif packet.headerId() == INCOMING_MESSAGES.PACKET_INTERCEPT.value:
+                habbo_msg_as_string = packet.read_string(head=4, encoding='iso-8859-1')
+                habbo_message = HMessage.reconstruct_from_java(self, habbo_msg_as_string)
+                habbo_packet = habbo_message.packet
+
+                # callbacks
+
+                response_packet = HPacket(self, OUTGOING_MESSAGES.MANIPULATED_PACKET.value)
+                response_packet.append_string(repr(habbo_message), head=4, encoding='iso-8859-1')
+                self.send_to_stream(response_packet)
+
+
 
     def send_to_stream(self, packet):
         self.stream_lock.acquire()
@@ -138,3 +183,9 @@ class Extension:
         self.is_closed = False
         t = threading.Thread(target=self.connection_thread)
         t.start()
+
+
+    def write_to_console(self, text, color='black', mention_title=True):
+        message = '[{}]{}{}'.format(color, (self.extension_info['title'] + ' --> ') if mention_title else '', text)
+        packet = HPacket(self, OUTGOING_MESSAGES.EXTENSION_CONSOLE_LOG.value, message)
+        self.send_to_stream(packet)

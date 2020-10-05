@@ -155,7 +155,7 @@ class HPacket:
 
     def append_string(self, value, head=2, encoding='utf-8'):
         b = value.encode(encoding)
-        self.bytearray.extend(value.to_bytes(head, byteorder='big', signed=False) + b)
+        self.bytearray.extend(len(b).to_bytes(head, byteorder='big', signed=False) + b)
         self.fix_length()
         self.is_edited = True
         return self
@@ -169,5 +169,7 @@ class HPacket:
 # print(packet.read_bool())
 # print(packet.read_bool())
 # print(packet.read_string())
+#
+# print(packet.headerId())
 #
 # print(bytes(packet))
