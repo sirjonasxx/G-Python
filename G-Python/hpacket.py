@@ -1,7 +1,7 @@
 class HPacket:
 
     def __init__(self, extension, header, *objects):
-        self.extension = extension
+        self._extension = extension
         self.read_index = 6
         self.bytearray = bytearray(b'\x00\x00\x00\x02\x00\xb0')
         self.replace_ushort(4, header)
@@ -24,7 +24,7 @@ class HPacket:
     def from_bytes(cls, extension, bytes):
         obj = cls.__new__(cls)  # Does not call __init__
         super(HPacket, obj).__init__()  # Don't forget to call any polymorphic base class initializers
-        obj.extension = extension
+        obj._extension = extension
         obj.bytearray = bytearray(bytes)
         obj.read_index = 6
         obj.is_edited = False
@@ -34,7 +34,7 @@ class HPacket:
     def reconstruct_from_java(cls, extension, string):
         obj = cls.__new__(cls)  # Does not call __init__
         super(HPacket, obj).__init__()  # Don't forget to call any polymorphic base class initializers
-        obj.extension = extension
+        obj._extension = extension
         obj.read_index = 6
 
         obj.bytearray = bytearray(string[1:].encode("iso-8859-1"))
@@ -51,7 +51,7 @@ class HPacket:
         return self.read_int(0)
 
     def __str__(self):
-        return "(id:{}, length:{}) -> {}".format(self.headerId(), len(self), bytes(self))
+        return "(id:{}, length:{}) -> {}".format(self.header_id(), len(self), bytes(self))
 
     def is_corrupted(self):
         return len(self.bytearray) < 6 or self.read_int(0) != len(self.bytearray) - 4
@@ -59,7 +59,7 @@ class HPacket:
     def reset(self):
         self.read_index = 6
 
-    def headerId(self):
+    def header_id(self):
         return self.read_ushort(4)
 
     def fix_length(self):
@@ -170,6 +170,6 @@ class HPacket:
 # print(packet.read_bool())
 # print(packet.read_string())
 #
-# print(packet.headerId())
+# print(packet.header_id())
 #
 # print(bytes(packet))
