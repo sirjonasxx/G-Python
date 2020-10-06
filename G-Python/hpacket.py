@@ -1,10 +1,10 @@
 class HPacket:
 
-    def __init__(self, extension, header, *objects):
+    def __init__(self, extension, id, *objects):
         self._extension = extension
         self.read_index = 6
         self.bytearray = bytearray(b'\x00\x00\x00\x02\x00\xb0')
-        self.replace_ushort(4, header)
+        self.replace_ushort(4, id)
         self.is_edited = False
 
         for object in objects:
@@ -31,9 +31,13 @@ class HPacket:
         return obj
 
     @classmethod
+    def from_string(cls, extension, string):
+        return extension.string_to_packet(string)
+
+    @classmethod
     def reconstruct_from_java(cls, extension, string):
-        obj = cls.__new__(cls)  # Does not call __init__
-        super(HPacket, obj).__init__()  # Don't forget to call any polymorphic base class initializers
+        obj = cls.__new__(cls)
+        super(HPacket, obj).__init__()
         obj._extension = extension
         obj.read_index = 6
 
@@ -52,6 +56,12 @@ class HPacket:
 
     def __str__(self):
         return "(id:{}, length:{}) -> {}".format(self.header_id(), len(self), bytes(self))
+
+    def g_string(self):
+        return self._extension.packet_to_string(self)
+
+    def g_expression(self):
+        return self._extension.packet_to_expression(self)
 
     def is_corrupted(self):
         return len(self.bytearray) < 6 or self.read_int(0) != len(self.bytearray) - 4
