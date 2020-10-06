@@ -104,6 +104,15 @@ class HPacket:
     def read_bool(self, index=None):
         return self.read_byte(index) != 0
 
+    def read(self, structure):
+        read_methods = {
+            'i': self.read_int,
+            's': self.read_string,
+            'b': self.read_byte,
+            'B': self.read_bool
+        }
+        return [read_methods[value_type]() for value_type in structure]
+
     def replace_int(self, index, value):
         self.bytearray[index:index + 4] = value.to_bytes(4, byteorder='big')
         self.is_edited = True
