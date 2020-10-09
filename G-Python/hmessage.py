@@ -15,7 +15,7 @@ class HMessage:
         self.is_blocked = is_blocked
 
     @classmethod
-    def reconstruct_from_java(cls, extension, string):
+    def reconstruct_from_java(cls, string):
         obj = cls.__new__(cls)
         super(HMessage, obj).__init__()
 
@@ -23,7 +23,7 @@ class HMessage:
         obj.is_blocked = split[0] == '1'
         obj._index = int(split[1])
         obj.direction = Direction.TO_CLIENT if split[2] == 'TOCLIENT' else Direction.TO_SERVER
-        obj.packet = HPacket.reconstruct_from_java(extension, split[3])
+        obj.packet = HPacket.reconstruct_from_java(split[3])
         return obj
 
     def __repr__(self):

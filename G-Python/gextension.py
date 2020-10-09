@@ -120,7 +120,7 @@ class Extension:
                 raise EOFError
             write_pos += n_read
 
-        return HPacket.from_bytes(self, packet_buffer)
+        return HPacket.from_bytes(packet_buffer)
 
     def __packet_manipulation_thread(self):
         while not self.is_closed():
@@ -147,7 +147,7 @@ class Extension:
                     func(habbo_message)
                     habbo_packet.reset()
 
-            response_packet = HPacket(self, OUTGOING_MESSAGES.MANIPULATED_PACKET.value)
+            response_packet = HPacket(OUTGOING_MESSAGES.MANIPULATED_PACKET.value)
             response_packet.append_string(repr(habbo_message), head=4, encoding='iso-8859-1')
             self.__send_to_stream(response_packet)
 
@@ -164,7 +164,7 @@ class Extension:
                 return
 
             if packet.header_id() == INCOMING_MESSAGES.INFO_REQUEST.value:
-                response = HPacket(self, OUTGOING_MESSAGES.EXTENSION_INFO.value)
+                response = HPacket(OUTGOING_MESSAGES.EXTENSION_INFO.value)
                 response\
                     .append_string(self._extension_info['title'])\
                     .append_string(self._extension_info['author'])\
@@ -212,7 +212,7 @@ class Extension:
 
             elif packet.header_id() == INCOMING_MESSAGES.PACKET_INTERCEPT.value:
                 habbo_msg_as_string = packet.read_string(head=4, encoding='iso-8859-1')
-                habbo_message = HMessage.reconstruct_from_java(self, habbo_msg_as_string)
+                habbo_message = HMessage.reconstruct_from_java(habbo_msg_as_string)
                 self.__manipulation_lock.acquire()
                 self.__manipulate_messages.append(habbo_message)
                 self.__manipulation_lock.release()
@@ -226,7 +226,7 @@ class Extension:
 
             elif packet.header_id() == INCOMING_MESSAGES.STRING_TO_PACKET_RESPONSE.value:
                 packet_string = packet.read_string(head=4, encoding='iso-8859-1')
-                self.__response = HPacket.reconstruct_from_java(self, packet_string)
+                self.__response = HPacket.reconstruct_from_java(packet_string)
                 self.__response_barrier.wait()
 
     def __send_to_stream(self, packet):
@@ -241,7 +241,7 @@ class Extension:
 
     def __send(self, direction, packet):
         if not self.is_closed():
-            wrapper_packet = HPacket(self, OUTGOING_MESSAGES.SEND_MESSAGE.value, direction == Direction.TO_SERVER,
+            wrapper_packet = HPacket(OUTGOING_MESSAGES.SEND_MESSAGE.value, direction == Direction.TO_SERVER,
                              len(packet.bytearray), bytes(packet.bytearray))
             self.__send_to_stream(wrapper_packet)
             return True
@@ -298,7 +298,7 @@ class Extension:
 
     def write_to_console(self, text, color='black', mention_title=True):
         message = '[{}]{}{}'.format(color, (self._extension_info['title'] + ' --> ') if mention_title else '', text)
-        packet = HPacket(self, OUTGOING_MESSAGES.EXTENSION_CONSOLE_LOG.value, message)
+        packet = HPacket(OUTGOING_MESSAGES.EXTENSION_CONSOLE_LOG.value, message)
         self.__send_to_stream(packet)
 
     def __await_response(self, request):
@@ -311,22 +311,22 @@ class Extension:
         return result
 
     def packet_to_string(self, packet):
-        request = HPacket(self, OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
+        request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
 
         return self.__await_response(request)[0]
 
     def packet_to_expression(self, packet):
-        request = HPacket(self, OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
+        request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
 
         return self.__await_response(request)[1]
 
     def string_to_packet(self, string):
-        request = HPacket(self, OUTGOING_MESSAGES.STRING_TO_PACKET_REQUEST.value)
+        request = HPacket(OUTGOING_MESSAGES.STRING_TO_PACKET_REQUEST.value)
         request.append_string(string, 4)
 
         return self.__await_response(request)
 
     def request_flags(self):
-        return self.__await_response(HPacket(self, OUTGOING_MESSAGES.REQUEST_FLAGS.value))
+        return self.__await_response(HPacket(OUTGOING_MESSAGES.REQUEST_FLAGS.value))

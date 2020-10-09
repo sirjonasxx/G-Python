@@ -28,11 +28,11 @@ def on_walk(message):
     # y = packet.read_int()
     (x, y) = message.packet.read('ii')
     print("Walking to x:{}, y={}".format(x, y))
-    ext.send_to_server(HPacket(ext, 1843, 1)) # wave
+    ext.send_to_server(HPacket(1843, 1)) # wave
 
     # 2 ways of sending packets from string representations
-    ext.send_to_client(HPacket.from_string(ext, '{l}{u:1411}{i:0}{s:"hi"}{i:0}{i:23}{i:0}{i:2}'))
-    ext.send_to_client(HPacket.from_string(ext, '[0][0][0][26][5][131][0][0][0][0][0][2]ho[0][0][0][0][0][0][0][3][0][0][0][0][0][0][0][2]'))
+    ext.send_to_client(HPacket.from_string('{l}{u:1411}{i:0}{s:"hi"}{i:0}{i:23}{i:0}{i:2}', ext))
+    ext.send_to_client(HPacket.from_string('[0][0][0][26][5][131][0][0][0][0][0][2]ho[0][0][0][0][0][0][0][3][0][0][0][0][0][0][0][2]', ext))
 
 
 def on_speech(message):
@@ -43,8 +43,8 @@ def on_speech(message):
 
 def all_packets(message):
     packet = message.packet
-    s = packet.g_string()
-    expr = packet.g_expression()
+    s = packet.g_string(ext)
+    expr = packet.g_expression(ext)
     print('{} --> {}'.format(message.direction.name, s))
     if expr != '':
         print(expr)
@@ -58,6 +58,6 @@ ext.intercept(Direction.TO_CLIENT, all_packets)
 ext.intercept(Direction.TO_SERVER, all_packets)
 
 
-packet = HPacket(ext, 1231, "hi", 5, "old", False, True, "lol")
-result = packet.g_expression()
+packet = HPacket(1231, "hi", 5, "old", False, True, "lol")
+result = packet.g_expression(ext)
 print(result)

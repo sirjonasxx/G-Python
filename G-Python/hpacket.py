@@ -1,7 +1,7 @@
 class HPacket:
+    default_extension = None
 
-    def __init__(self, extension, id, *objects):
-        self._extension = extension
+    def __init__(self, id, *objects):
         self.read_index = 6
         self.bytearray = bytearray(b'\x00\x00\x00\x02\x00\xb0')
         self.replace_ushort(4, id)
@@ -21,24 +21,27 @@ class HPacket:
 
     # https://stackoverflow.com/questions/682504/what-is-a-clean-pythonic-way-to-have-multiple-constructors-in-python
     @classmethod
-    def from_bytes(cls, extension, bytes):
+    def from_bytes(cls, bytes):
         obj = cls.__new__(cls)  # Does not call __init__
         super(HPacket, obj).__init__()  # Don't forget to call any polymorphic base class initializers
-        obj._extension = extension
         obj.bytearray = bytearray(bytes)
         obj.read_index = 6
         obj.is_edited = False
         return obj
 
     @classmethod
-    def from_string(cls, extension, string):
+    def from_string(cls, string, extension = None):
+        if extension is None:
+            if HPacket.default_extension is None:
+                raise Exception('No extension given for string <-> packet conversion')
+            else:
+                extension = HPacket.default_extension
         return extension.string_to_packet(string)
 
     @classmethod
-    def reconstruct_from_java(cls, extension, string):
+    def reconstruct_from_java(cls, string):
         obj = cls.__new__(cls)
         super(HPacket, obj).__init__()
-        obj._extension = extension
         obj.read_index = 6
 
         obj.bytearray = bytearray(string[1:].encode("iso-8859-1"))
@@ -57,11 +60,21 @@ class HPacket:
     def __str__(self):
         return "(id:{}, length:{}) -> {}".format(self.header_id(), len(self), bytes(self))
 
-    def g_string(self):
-        return self._extension.packet_to_string(self)
+    def g_string(self, extension = None):
+        if extension is None:
+            if HPacket.default_extension is None:
+                raise Exception('No extension given for packet <-> string conversion')
+            else:
+                extension = HPacket.default_extension
+        return extension.packet_to_string(self)
 
-    def g_expression(self):
-        return self._extension.packet_to_expression(self)
+    def g_expression(self, extension = None):
+        if extension is None:
+            if HPacket.default_extension is None:
+                raise Exception('No extension given for packet <-> string conversion')
+            else:
+                extension = HPacket.default_extension
+        return extension.packet_to_expression(self)
 
     def is_corrupted(self):
         return len(self.bytearray) < 6 or self.read_int(0) != len(self.bytearray) - 4
@@ -179,7 +192,7 @@ class HPacket:
         self.is_edited = True
         return self
 
-# packet = HPacket(None, 1231, "hi", 5, "old", False, True, "lol")
+# packet = HPacket(1231, "hi", 5, "old", False, True, "lol")
 #
 # print(packet.read_string())
 # print(packet.read_int())
