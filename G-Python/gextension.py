@@ -136,6 +136,7 @@ class Extension:
                     self.__manipulation_event.clear()
 
             habbo_packet = habbo_message.packet
+            habbo_packet.default_extension = self
 
             for func in self.__intercept_listeners[habbo_message.direction][-1]:
                 func(habbo_message)
@@ -250,33 +251,58 @@ class Extension:
             return False
 
     def is_closed(self):
+        """
+        :return: true if no extension isn't connected with G-Earth
+        """
         return self.__sock is None or self.__sock.fileno() == -1
 
     def send_to_client(self, packet):
+        """
+        Sends a message to the client
+        :param packet: a HPacket() or a string representation
+        """
+
+        if type(packet) is str:
+            packet = self.string_to_packet(packet)
         self.__send(Direction.TO_CLIENT, packet)
 
     def send_to_server(self, packet):
+        """
+        Sends a message to the server
+        :param packet: a HPacket() or a string representation
+        """
+
+        if type(packet) is str:
+            packet = self.string_to_packet(packet)
         self.__send(Direction.TO_SERVER, packet)
 
-    def on_event(self, event_name, func):
-        """ implemented event names:
-            * double_click
-            * connection_start
-            * connection_end
-            * init
-            """
+    def on_event(self, event_name : str, func):
+        """
+        implemented event names: double_click, connection_start, connection_end,init. When this
+        even occurs, a callback is being done to "func"
+        """
         if event_name in self.__events:
             self.__events[event_name].append(func)
         else:
             self.__events[event_name] = [func]
 
-    def intercept(self, direction, callback, id=-1):
+    def intercept(self, direction: Direction, callback, id=-1):
+        """
+        :param direction: Direction.TOCLIENT or Direction.TOSERVER
+        :param callback: function that takes HMessage as an argument
+        :param id: headerId
+        :return:
+        """
+
         # todo: id could be hash/name from HarbleAPI
         if id not in self.__intercept_listeners[direction]:
             self.__intercept_listeners[direction][id] = []
         self.__intercept_listeners[direction][id].append(callback)
 
     def start(self):
+        """
+        Tries to set up a connection with G-Earth
+        """
         self.__start_lock.acquire()
         if self.is_closed():
             self.__sock = socket.socket()
@@ -291,12 +317,18 @@ class Extension:
         self.__start_lock.release()
 
     def stop(self):
+        """
+        Aborts an existing connection with G-Earth
+        """
         if not self.is_closed():
             self.__sock.close()
         else:
             raise Exception("Attempted to close extension that wasn't running")
 
     def write_to_console(self, text, color='black', mention_title=True):
+        """
+        Writes a message to the G-Earth console
+        """
         message = '[{}]{}{}'.format(color, (self._extension_info['title'] + ' --> ') if mention_title else '', text)
         packet = HPacket(OUTGOING_MESSAGES.EXTENSION_CONSOLE_LOG.value, message)
         self.__send_to_stream(packet)
