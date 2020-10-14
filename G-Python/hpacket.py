@@ -191,17 +191,3 @@ class HPacket:
         self.fix_length()
         self.is_edited = True
         return self
-
-# packet = HPacket(1231, "hi", 5, "old", False, True, "lol")
-#
-# print(packet.read_string())
-# print(packet.read_int())
-# packet.replace_string(packet.read_index, "newstring")
-# print(packet.read_string())
-# print(packet.read_bool())
-# print(packet.read_bool())
-# print(packet.read_string())
-#
-# print(packet.header_id())
-#
-# print(bytes(packet))
