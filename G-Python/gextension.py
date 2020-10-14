@@ -125,7 +125,7 @@ class Extension:
     def __packet_manipulation_thread(self):
         while not self.is_closed():
             habbo_message = None
-            while habbo_message is None:
+            while habbo_message is None and not self.is_closed():
                 if len(self.__manipulate_messages) > 0:
                     self.__manipulation_lock.acquire()
                     habbo_message = self.__manipulate_messages.pop(0)
@@ -134,6 +134,9 @@ class Extension:
                 else:
                     self.__manipulation_event.wait(0.002)
                     self.__manipulation_event.clear()
+
+            if self.is_closed():
+                return
 
             habbo_packet = habbo_message.packet
             habbo_packet.default_extension = self
@@ -221,7 +224,7 @@ class Extension:
 
             elif packet.header_id() == INCOMING_MESSAGES.PACKET_TO_STRING_RESPONSE.value:
                 string = packet.read_string(head=4, encoding='iso-8859-1')
-                expression = packet.read_string(head=4)
+                expression = packet.read_string(head=4, encoding='utf-8')
                 self.__response = (string, expression)
                 self.__response_barrier.wait()
 
