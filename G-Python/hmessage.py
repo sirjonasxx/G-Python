@@ -8,7 +8,7 @@ class Direction(Enum):
     TO_SERVER = 1
 
 class HMessage:
-    def __init__(self, packet, direction, index, is_blocked=False):
+    def __init__(self, packet : HPacket, direction: Direction, index: int, is_blocked=False):
         self.packet = packet
         self.direction = direction
         self._index = index
