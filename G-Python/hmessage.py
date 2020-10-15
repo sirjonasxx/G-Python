@@ -1,8 +1,9 @@
 from hpacket import HPacket
 from hdirection import Direction
 
+
 class HMessage:
-    def __init__(self, packet : HPacket, direction: Direction, index: int, is_blocked=False):
+    def __init__(self, packet: HPacket, direction: Direction, index: int, is_blocked=False):
         self.packet = packet
         self.direction = direction
         self._index = index

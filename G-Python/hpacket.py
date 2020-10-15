@@ -1,5 +1,6 @@
 from hdirection import Direction
 
+
 class HPacket:
     default_extension = None
 
@@ -25,7 +26,7 @@ class HPacket:
 
         self.is_edited = False
 
-    def fill_id(self, extension = None, direction : Direction = None) -> bool:
+    def fill_id(self, extension=None, direction: Direction = None) -> bool:
         if self.delayed_id is not None:
             if extension is None:
                 if self.default_extension is None:
@@ -35,7 +36,7 @@ class HPacket:
                 if extension.harble_api is None:
                     return False
                 if (self.delayed_id in extension.harble_api[Direction.TO_CLIENT]) is not \
-                    (self.delayed_id in extension.harble_api[Direction.TO_SERVER]):
+                        (self.delayed_id in extension.harble_api[Direction.TO_SERVER]):
                     direction = Direction.TO_CLIENT if \
                         (self.delayed_id in extension.harble_api[Direction.TO_CLIENT]) else Direction.TO_SERVER
                 else:
@@ -61,7 +62,7 @@ class HPacket:
         return obj
 
     @classmethod
-    def from_string(cls, string, extension = None):
+    def from_string(cls, string, extension=None):
         if extension is None:
             if HPacket.default_extension is None:
                 raise Exception('No extension given for string <-> packet conversion')
@@ -93,7 +94,7 @@ class HPacket:
         return "(id:{}, length:{}) -> {}".format(self.header_id() if self.delayed_id is None else self.delayed_id,
                                                  len(self), bytes(self))
 
-    def g_string(self, extension = None) -> str:
+    def g_string(self, extension=None) -> str:
         self.fill_id(extension)
         if extension is None:
             if HPacket.default_extension is None:
@@ -106,7 +107,7 @@ class HPacket:
 
         return extension.packet_to_string(self)
 
-    def g_expression(self, extension = None) -> str:
+    def g_expression(self, extension=None) -> str:
         self.fill_id(extension)
         if extension is None:
             if HPacket.default_extension is None:

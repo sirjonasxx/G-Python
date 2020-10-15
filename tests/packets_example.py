@@ -14,8 +14,8 @@ extension_info = {
 ext = Extension(extension_info, sys.argv)
 ext.start()
 
-
 print(ext.request_flags())
+
 
 def on_walk(message):
     # packet = message.packet
@@ -30,18 +30,19 @@ def on_walk(message):
 
     # 2 ways of sending packets from string representations
     ext.send_to_client(HPacket.from_string('{l}{u:1411}{i:0}{s:"hi"}{i:0}{i:23}{i:0}{i:2}', ext))
-    ext.send_to_client(HPacket.from_string('[0][0][0][26][5][131][0][0][0][0][0][2]ho[0][0][0][0][0][0][0][3][0][0][0][0][0][0][0][2]', ext))
+    ext.send_to_client(
+        HPacket.from_string('[0][0][0][26][5][131][0][0][0][0][0][2]ho[0][0][0][0][0][0][0][3][0][0][0][0][0][0][0][2]',
+                            ext))
 
 
 def on_speech(message):
     (text, color, index) = message.packet.read('sii')
-    message.is_blocked = (text == 'blocked')    # block packet if speech equals "blocked"
+    message.is_blocked = (text == 'blocked')  # block packet if speech equals "blocked"
     print("User said: {}".format(text))
 
 
 ext.intercept(Direction.TO_SERVER, on_walk, 'RoomUserWalk')
 ext.intercept(Direction.TO_SERVER, on_speech, 'RoomUserTalk')
-
 
 packet = HPacket(1231, "hi", 5, "old", False, True, "lol")
 result = packet.g_expression(ext)  # get G-Earth's predicted expression for the packet above

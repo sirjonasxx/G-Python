@@ -105,20 +105,21 @@ def read_stuff(packet, category):
     stuff = []
     cat2 = category & 0xFF
 
-    if cat2 == 0:   # legacy
+    if cat2 == 0:  # legacy
         stuff.append(packet.read_string())
-    if cat2 == 1:   # map
+    if cat2 == 1:  # map
         stuff.append([packet.read('ss') for _ in range(packet.read_int())])
-    if cat2 == 2:   # string array
+    if cat2 == 2:  # string array
         stuff.append([packet.read_string() for _ in range(packet.read_int())])
-    if cat2 == 3:   # vote results
+    if cat2 == 3:  # vote results
         stuff.extend(packet.read('si'))
-    if cat2 == 5:   # int array
+    if cat2 == 5:  # int array
         stuff.append([packet.read_int() for _ in range(packet.read_int())])
-    if cat2 == 6:   # highscores
+    if cat2 == 6:  # highscores
         stuff.extend(packet.read('sii'))
-        stuff.append([(packet.read_int(), [packet.read_string() for _ in range(packet.read_int())]) for _ in range(packet.read_int())])
-    if cat2 == 7:   # crackables
+        stuff.append([(packet.read_int(), [packet.read_string() for _ in range(packet.read_int())]) for _ in
+                      range(packet.read_int())])
+    if cat2 == 7:  # crackables
         stuff.extend(packet.read('sii'))
 
     if (category & 0xFF00 & 0x100) > 0:
@@ -138,7 +139,7 @@ class HFloorItem:
         self.stuff = read_stuff(packet, self.category)
 
         self.seconds_to_expiration, self.usage_policy, self.owner_id = packet.read('iii')
-        self.owner = None   # expected to be filled in by parse class method
+        self.owner = None  # expected to be filled in by parse class method
 
         if self.type_id < 0:
             packet.read_string()
@@ -160,13 +161,13 @@ class HFloorItem:
 class HGroup:
     def __init__(self, packet):
         self.id, self.name, self.badge_code, self.primary_color, self.secondary_color, \
-            self.is_favorite, self.owner_id, self.has_forum = packet.read('issssBiB')
+        self.is_favorite, self.owner_id, self.has_forum = packet.read('issssBiB')
 
 
 class HUserProfile:
     def __init__(self, packet):
         self.id, self.username, self.motto, self.figure, self.creation_date, self.achievement_score, \
-            self.friend_count, self.is_friend, self.is_requested_friend, self.is_online = packet.read('issssiiBBB')
+        self.friend_count, self.is_friend, self.is_requested_friend, self.is_online = packet.read('issssiiBBB')
 
         self.groups = [HGroup(packet) for _ in range(packet.read_int())]
         self.last_access_since, self.open_profile = packet.read('iB')
@@ -180,7 +181,7 @@ class HUserProfile:
 class HWallItem:
     def __init__(self, packet):
         self.id, self.type_id, self.location, self.state, self.seconds_to_expiration, self.usage_policy, \
-            self.owner_id = packet.read('sissiii')
+        self.owner_id = packet.read('sissiii')
 
     @classmethod
     def parse(cls, packet):
@@ -205,7 +206,7 @@ class HInventoryItem:
         self.stuff = read_stuff(packet, self.category)
 
         self.is_groupable, self.is_tradeable, _, self.market_place_allowed, self.seconds_to_expiration, \
-            self.has_rent_period_started, self.room_Id = packet.read('BBBBiBi')
+        self.has_rent_period_started, self.room_Id = packet.read('BBBBiBi')
 
         if self.is_floor_furni:
             self.slot_id = packet.read_string()

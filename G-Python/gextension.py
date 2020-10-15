@@ -93,7 +93,7 @@ class Extension:
         self.__stream_lock = threading.Lock()
 
         self.__events = {}
-        self.__intercept_listeners = {Direction.TO_CLIENT: {-1:[]}, Direction.TO_SERVER: {-1:[]}}
+        self.__intercept_listeners = {Direction.TO_CLIENT: {-1: []}, Direction.TO_SERVER: {-1: []}}
 
         self.__request_lock = threading.Lock()
         self.__response_barrier = threading.Barrier(2)
@@ -180,16 +180,16 @@ class Extension:
             message_type = INCOMING_MESSAGES(packet.header_id())
             if message_type == INCOMING_MESSAGES.INFO_REQUEST:
                 response = HPacket(OUTGOING_MESSAGES.EXTENSION_INFO.value)
-                response\
-                    .append_string(self._extension_info['title'])\
-                    .append_string(self._extension_info['author'])\
-                    .append_string(self._extension_info['version'])\
-                    .append_string(self._extension_info['description'])\
-                    .append_bool(self._extension_settings['use_click_trigger'])\
-                    .append_bool(self.__file is not None)\
+                response \
+                    .append_string(self._extension_info['title']) \
+                    .append_string(self._extension_info['author']) \
+                    .append_string(self._extension_info['version']) \
+                    .append_string(self._extension_info['description']) \
+                    .append_bool(self._extension_settings['use_click_trigger']) \
+                    .append_bool(self.__file is not None) \
                     .append_string('' if self.__file is None else self.__file) \
-                    .append_string('' if self.__cookie is None else self.__cookie)\
-                    .append_bool(self._extension_settings['can_leave'])\
+                    .append_string('' if self.__cookie is None else self.__cookie) \
+                    .append_bool(self._extension_settings['can_leave']) \
                     .append_bool(self._extension_settings['can_delete'])
 
                 self.__send_to_stream(response)
@@ -285,7 +285,7 @@ class Extension:
             for func in self.__events[event_name]:
                 func()
 
-    def __send(self, direction, packet : HPacket):
+    def __send(self, direction, packet: HPacket):
         if not self.is_closed():
             packet.fill_id(self, direction)
             if packet.is_corrupted():
@@ -294,7 +294,7 @@ class Extension:
                 return False
 
             wrapper_packet = HPacket(OUTGOING_MESSAGES.SEND_MESSAGE.value, direction == Direction.TO_SERVER,
-                             len(packet.bytearray), bytes(packet.bytearray))
+                                     len(packet.bytearray), bytes(packet.bytearray))
             self.__send_to_stream(wrapper_packet)
             return True
         else:
@@ -327,7 +327,7 @@ class Extension:
             packet = self.string_to_packet(packet)
         self.__send(Direction.TO_SERVER, packet)
 
-    def on_event(self, event_name : str, func):
+    def on_event(self, event_name: str, func):
         """
         implemented event names: double_click, connection_start, connection_end,init. When this
         even occurs, a callback is being done to "func"
@@ -392,14 +392,14 @@ class Extension:
         self.__request_lock.release()
         return result
 
-    def packet_to_string(self, packet : HPacket):
+    def packet_to_string(self, packet: HPacket):
         packet.fill_id(self)
         request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
 
         return self.__await_response(request)[0]
 
-    def packet_to_expression(self, packet : HPacket):
+    def packet_to_expression(self, packet: HPacket):
         packet.fill_id(self)
         request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
