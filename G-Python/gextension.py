@@ -287,7 +287,12 @@ class Extension:
 
     def __send(self, direction, packet: HPacket):
         if not self.is_closed():
-            packet.fill_id(self, direction)
+
+            old_settings = None
+            if packet.is_harble_api_packet():
+                old_settings = (packet.header_id(), packet.is_edited, packet.harble_id)
+                packet.fill_id(direction, self)
+
             if packet.is_corrupted():
                 self.__lost_packets += 1
                 print('Could not send corrupted packet')
@@ -296,6 +301,12 @@ class Extension:
             wrapper_packet = HPacket(OUTGOING_MESSAGES.SEND_MESSAGE.value, direction == Direction.TO_SERVER,
                                      len(packet.bytearray), bytes(packet.bytearray))
             self.__send_to_stream(wrapper_packet)
+
+            if old_settings is not None:
+                packet.replace_ushort(4, old_settings[0])
+                packet.harble_id = old_settings[2]
+                packet.is_edited = old_settings[1]
+
             return True
         else:
             self.__lost_packets += 1
@@ -393,14 +404,12 @@ class Extension:
         return result
 
     def packet_to_string(self, packet: HPacket):
-        packet.fill_id(self)
         request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
 
         return self.__await_response(request)[0]
 
     def packet_to_expression(self, packet: HPacket):
-        packet.fill_id(self)
         request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
 

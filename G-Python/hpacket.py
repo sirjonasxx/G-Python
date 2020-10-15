@@ -5,12 +5,11 @@ class HPacket:
     default_extension = None
 
     def __init__(self, id, *objects):
-        self.delayed_id = None if (type(id) is int) else id
-        self.fill_id()
+        self.harble_id = None if (type(id) is int) else id
 
         self.read_index = 6
-        self.bytearray = bytearray(b'\x00\x00\x00\x02\x00\x00')
-        if self.delayed_id is None:
+        self.bytearray = bytearray(b'\x00\x00\x00\x02\xff\xff')
+        if self.harble_id is None:
             self.replace_ushort(4, id)
         self.is_edited = False
 
@@ -26,27 +25,18 @@ class HPacket:
 
         self.is_edited = False
 
-    def fill_id(self, extension=None, direction: Direction = None) -> bool:
-        if self.delayed_id is not None:
+    def fill_id(self, direction: Direction, extension=None) -> bool:
+        if self.harble_id is not None:
             if extension is None:
                 if self.default_extension is None:
                     return False
                 extension = self.default_extension
-            if direction is None:
-                if extension.harble_api is None:
-                    return False
-                if (self.delayed_id in extension.harble_api[Direction.TO_CLIENT]) is not \
-                        (self.delayed_id in extension.harble_api[Direction.TO_SERVER]):
-                    direction = Direction.TO_CLIENT if \
-                        (self.delayed_id in extension.harble_api[Direction.TO_CLIENT]) else Direction.TO_SERVER
-                else:
-                    return False
 
-            if extension.harble_api is not None and self.delayed_id in extension.harble_api[direction]:
+            if extension.harble_api is not None and self.harble_id in extension.harble_api[direction]:
                 edited_old = self.is_edited
-                self.replace_ushort(4, extension.harble_api[direction][self.delayed_id]['Id'])
+                self.replace_ushort(4, extension.harble_api[direction][self.harble_id]['Id'])
                 self.is_edited = edited_old
-                self.delayed_id = None
+                self.harble_id = None
                 return True
             return False
         return True
@@ -78,7 +68,7 @@ class HPacket:
 
         obj.bytearray = bytearray(string[1:].encode("iso-8859-1"))
         obj.is_edited = string[0] == '1'
-        obj.delayed_id = None
+        obj.harble_id = None
         return obj
 
     def __repr__(self):
@@ -91,36 +81,32 @@ class HPacket:
         return self.read_int(0)
 
     def __str__(self):
-        return "(id:{}, length:{}) -> {}".format(self.header_id() if self.delayed_id is None else self.delayed_id,
+        return "(id:{}, length:{}) -> {}".format(self.header_id() if not self.is_harble_api_packet() else self.harble_id,
                                                  len(self), bytes(self))
 
+    def is_harble_api_packet(self) -> bool:
+        return self.harble_id is not None
+
     def g_string(self, extension=None) -> str:
-        self.fill_id(extension)
         if extension is None:
             if HPacket.default_extension is None:
                 raise Exception('No extension given for packet <-> string conversion')
             else:
                 extension = HPacket.default_extension
-        if self.delayed_id is not None:
-            raise Exception('Please initialize the packet with packet.fill_id(ext, Direction.XXX), if that doesn\'t '
-                            'work, HarbleAPI does not contain your hash')
 
         return extension.packet_to_string(self)
 
     def g_expression(self, extension=None) -> str:
-        self.fill_id(extension)
         if extension is None:
             if HPacket.default_extension is None:
                 raise Exception('No extension given for packet <-> string conversion')
             else:
                 extension = HPacket.default_extension
-        if self.delayed_id is not None:
-            raise Exception('Please initialize the packet with packet.fill_id(ext, Direction.XXX)')
 
         return extension.packet_to_expression(self)
 
     def is_corrupted(self) -> bool:
-        return self.delayed_id is not None or len(self.bytearray) < 6 or self.read_int(0) != len(self.bytearray) - 4
+        return len(self.bytearray) < 6 or self.read_int(0) != len(self.bytearray) - 4
 
     def reset(self) -> None:
         self.read_index = 6
