@@ -1,14 +1,13 @@
 import sys
 from enum import Enum
-
-from hpacket import HPacket
+import hpacket
 
 class Direction(Enum):
     TO_CLIENT = 0
     TO_SERVER = 1
 
 class HMessage:
-    def __init__(self, packet : HPacket, direction: Direction, index: int, is_blocked=False):
+    def __init__(self, packet, direction: Direction, index: int, is_blocked=False):
         self.packet = packet
         self.direction = direction
         self._index = index
@@ -23,7 +22,7 @@ class HMessage:
         obj.is_blocked = split[0] == '1'
         obj._index = int(split[1])
         obj.direction = Direction.TO_CLIENT if split[2] == 'TOCLIENT' else Direction.TO_SERVER
-        obj.packet = HPacket.reconstruct_from_java(split[3])
+        obj.packet = hpacket.HPacket.reconstruct_from_java(split[3])
         return obj
 
     def __repr__(self):

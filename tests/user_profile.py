@@ -20,4 +20,4 @@ def user_profile(message):
     print(profile)
 
 
-ext.intercept(Direction.TO_CLIENT, user_profile, 1376)  # UserProfile
+ext.intercept(Direction.TO_CLIENT, user_profile, 'UserProfile')  # UserProfile

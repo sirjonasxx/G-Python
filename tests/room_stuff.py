@@ -48,8 +48,9 @@ def wall_furni_load(message):
     print("Found {} wall furniture in room".format(len(wall_furni)))
 
 
-ext.intercept(Direction.TO_CLIENT, load_room_users, 2029)       # RoomUsers
-ext.intercept(Direction.TO_CLIENT, clear_room_users, 3968)      # RoomModel (clear users / new room entered)
+ext.intercept(Direction.TO_CLIENT, load_room_users, 'RoomUsers')
+ext.intercept(Direction.TO_CLIENT, clear_room_users, 'RoomModel')       # (clear users / new room entered)
 
-ext.intercept(Direction.TO_CLIENT, floor_furni_load, 2944)      # RoomFloorItems
-ext.intercept(Direction.TO_CLIENT, wall_furni_load, 703)        # RoomWallItems
+ext.intercept(Direction.TO_CLIENT, floor_furni_load, 'RoomFloorItems')
+# ext.intercept(Direction.TO_CLIENT, wall_furni_load, 703)              # RoomWallItems
+ext.intercept(Direction.TO_CLIENT, wall_furni_load, 'RoomWallItems')

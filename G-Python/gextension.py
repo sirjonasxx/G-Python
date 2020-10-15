@@ -3,6 +3,7 @@ import threading
 from enum import Enum
 from hpacket import HPacket
 from hmessage import HMessage, Direction
+import json
 
 
 class INCOMING_MESSAGES(Enum):
@@ -85,6 +86,7 @@ class Extension:
         self._extension_settings = extension_settings
 
         self.connection_info = None
+        self.harble_api = None
 
         self.__start_barrier = threading.Barrier(2)
         self.__start_lock = threading.Lock()
@@ -146,10 +148,18 @@ class Extension:
                 habbo_packet.reset()
 
             header_id = habbo_packet.header_id()
-            if header_id in self.__intercept_listeners[habbo_message.direction]:
-                for func in self.__intercept_listeners[habbo_message.direction][header_id]:
-                    func(habbo_message)
-                    habbo_packet.reset()
+            hash, name = None, None
+            if self.harble_api is not None and header_id in self.harble_api[habbo_message.direction]:
+                hash = self.harble_api[habbo_message.direction][header_id]['Hash']
+                name = self.harble_api[habbo_message.direction][header_id]['Name']
+                if name == '' or name == 'null':
+                    name = None
+
+            for id in [header_id, hash, name]:
+                if id is not None and id in self.__intercept_listeners[habbo_message.direction]:
+                    for func in self.__intercept_listeners[habbo_message.direction][id]:
+                        func(habbo_message)
+                        habbo_packet.reset()
 
             response_packet = HPacket(OUTGOING_MESSAGES.MANIPULATED_PACKET.value)
             response_packet.append_string(repr(habbo_message), head=4, encoding='iso-8859-1')
@@ -167,7 +177,8 @@ class Extension:
                     self.stop()
                 return
 
-            if packet.header_id() == INCOMING_MESSAGES.INFO_REQUEST.value:
+            message_type = INCOMING_MESSAGES(packet.header_id())
+            if message_type == INCOMING_MESSAGES.INFO_REQUEST:
                 response = HPacket(OUTGOING_MESSAGES.EXTENSION_INFO.value)
                 response\
                     .append_string(self._extension_info['title'])\
@@ -183,26 +194,31 @@ class Extension:
 
                 self.__send_to_stream(response)
 
-            elif packet.header_id() == INCOMING_MESSAGES.CONNECTION_START.value:
+            elif message_type == INCOMING_MESSAGES.CONNECTION_START:
                 host = packet.read_string()
                 port = packet.read_int()
                 hotel_version = packet.read_string()
                 harble_messages_path = packet.read_string()
                 self.connection_info = {'host': host, 'port': port, 'hotel_version': hotel_version,
                                         'harble_messages_path': harble_messages_path}
+
+                if harble_messages_path != '' and harble_messages_path != 'null':
+                    self.__harble_api_init()
+
                 self.__raise_event('connection_start')
 
-            elif packet.header_id() == INCOMING_MESSAGES.CONNECTION_END.value:
+            elif message_type == INCOMING_MESSAGES.CONNECTION_END:
                 self.__raise_event('connection_end')
                 self.connection_info = None
+                self.harble_api = None
 
-            elif packet.header_id() == INCOMING_MESSAGES.FLAGS_CHECK.value:
+            elif message_type == INCOMING_MESSAGES.FLAGS_CHECK:
                 size = packet.read_int()
                 flags = [packet.read_string() for _ in range(size)]
                 self.__response = flags
                 self.__response_barrier.wait()
 
-            elif packet.header_id() == INCOMING_MESSAGES.INIT.value:
+            elif message_type == INCOMING_MESSAGES.INIT:
                 self.__raise_event('init')
                 self.write_to_console(
                     'G-Python extension "{}" sucessfully initialized'.format(self._extension_info['title']),
@@ -211,10 +227,10 @@ class Extension:
                 )
                 self.__start_barrier.wait()
 
-            elif packet.header_id() == INCOMING_MESSAGES.ON_DOUBLE_CLICK.value:
+            elif message_type == INCOMING_MESSAGES.ON_DOUBLE_CLICK:
                 self.__raise_event('double_click')
 
-            elif packet.header_id() == INCOMING_MESSAGES.PACKET_INTERCEPT.value:
+            elif message_type == INCOMING_MESSAGES.PACKET_INTERCEPT:
                 habbo_msg_as_string = packet.read_string(head=4, encoding='iso-8859-1')
                 habbo_message = HMessage.reconstruct_from_java(habbo_msg_as_string)
                 self.__manipulation_lock.acquire()
@@ -222,16 +238,42 @@ class Extension:
                 self.__manipulation_lock.release()
                 self.__manipulation_event.set()
 
-            elif packet.header_id() == INCOMING_MESSAGES.PACKET_TO_STRING_RESPONSE.value:
+            elif message_type == INCOMING_MESSAGES.PACKET_TO_STRING_RESPONSE:
                 string = packet.read_string(head=4, encoding='iso-8859-1')
                 expression = packet.read_string(head=4, encoding='utf-8')
                 self.__response = (string, expression)
                 self.__response_barrier.wait()
 
-            elif packet.header_id() == INCOMING_MESSAGES.STRING_TO_PACKET_RESPONSE.value:
+            elif message_type == INCOMING_MESSAGES.STRING_TO_PACKET_RESPONSE:
                 packet_string = packet.read_string(head=4, encoding='iso-8859-1')
                 self.__response = HPacket.reconstruct_from_java(packet_string)
                 self.__response_barrier.wait()
+
+    def __harble_api_init(self):
+        try:
+            path = self.connection_info['harble_messages_path']
+            with open(path) as f:
+
+                def generate_harble_dict(json_list):
+                    dict = {}
+                    for elem in json_list:
+                        dict[elem['Id']] = elem
+                        dict[elem['Hash']] = elem
+                        name = elem['Name']
+                        if name is not None and name != '' and name != 'null':
+                            dict[name] = elem
+                    return dict
+
+                harble_api_json = json.load(f)
+                incoming_json = harble_api_json['Incoming']
+                outgoing_json = harble_api_json['Outgoing']
+                incoming = generate_harble_dict(incoming_json)
+                outgoing = generate_harble_dict(outgoing_json)
+
+                self.harble_api = {Direction.TO_CLIENT: incoming, Direction.TO_SERVER: outgoing}
+        except:
+            self.harble_api = None
+            self.write_to_console('Failed parsing HarbleAPI', 'red')
 
     def __send_to_stream(self, packet):
         self.__stream_lock.acquire()
@@ -243,8 +285,14 @@ class Extension:
             for func in self.__events[event_name]:
                 func()
 
-    def __send(self, direction, packet):
+    def __send(self, direction, packet : HPacket):
         if not self.is_closed():
+            packet.fill_id(self, direction)
+            if packet.is_corrupted():
+                self.__lost_packets += 1
+                print('Could not send corrupted packet')
+                return False
+
             wrapper_packet = HPacket(OUTGOING_MESSAGES.SEND_MESSAGE.value, direction == Direction.TO_SERVER,
                              len(packet.bytearray), bytes(packet.bytearray))
             self.__send_to_stream(wrapper_packet)
@@ -293,11 +341,10 @@ class Extension:
         """
         :param direction: Direction.TOCLIENT or Direction.TOSERVER
         :param callback: function that takes HMessage as an argument
-        :param id: headerId
+        :param id: header_id / hash / name
         :return:
         """
 
-        # todo: id could be hash/name from HarbleAPI
         if id not in self.__intercept_listeners[direction]:
             self.__intercept_listeners[direction][id] = []
         self.__intercept_listeners[direction][id].append(callback)
@@ -345,13 +392,15 @@ class Extension:
         self.__request_lock.release()
         return result
 
-    def packet_to_string(self, packet):
+    def packet_to_string(self, packet : HPacket):
+        packet.fill_id(self)
         request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
 
         return self.__await_response(request)[0]
 
-    def packet_to_expression(self, packet):
+    def packet_to_expression(self, packet : HPacket):
+        packet.fill_id(self)
         request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
 

@@ -45,8 +45,8 @@ def user_inventory_load(message : HMessage):
 
 def request_inventory():
     print("Requesting inventory")
-    ext.send_to_server(HPacket(2499))       # RequestInventoryItems
+    ext.send_to_server(HPacket('RequestInventoryItems'))       # RequestInventoryItems
 
 
 ext.on_event('double_click', request_inventory)
-ext.intercept(Direction.TO_CLIENT, user_inventory_load, 331)   # InventoryItems
+ext.intercept(Direction.TO_CLIENT, user_inventory_load, 'InventoryItems')   # InventoryItems

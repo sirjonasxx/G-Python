@@ -1,10 +1,16 @@
+import hmessage
+
 class HPacket:
     default_extension = None
 
     def __init__(self, id, *objects):
+        self.delayed_id = None if (type(id) is int) else id
+        self.fill_id()
+
         self.read_index = 6
-        self.bytearray = bytearray(b'\x00\x00\x00\x02\x00\xb0')
-        self.replace_ushort(4, id)
+        self.bytearray = bytearray(b'\x00\x00\x00\x02\x00\x00')
+        if self.delayed_id is None:
+            self.replace_ushort(4, id)
         self.is_edited = False
 
         for object in objects:
@@ -18,6 +24,31 @@ class HPacket:
                 self.append_bytes(object)
 
         self.is_edited = False
+
+    def fill_id(self, extension = None, direction = None):
+        if self.delayed_id is not None:
+            if extension is None:
+                if self.default_extension is None:
+                    return False
+                extension = self.default_extension
+            if direction is None:
+                if extension.harble_api is None:
+                    return False
+                if (self.delayed_id in extension.harble_api[hmessage.Direction.TO_CLIENT]) is not \
+                    (self.delayed_id in extension.harble_api[hmessage.Direction.TO_SERVER]):
+                    direction = hmessage.Direction.TO_CLIENT if \
+                        (self.delayed_id in extension.harble_api[hmessage.Direction.TO_CLIENT]) else hmessage.Direction.TO_SERVER
+                else:
+                    return False
+
+            if extension.harble_api is not None and self.delayed_id in extension.harble_api[direction]:
+                edited_old = self.is_edited
+                self.replace_ushort(4, extension.harble_api[direction][self.delayed_id]['Id'])
+                self.is_edited = edited_old
+                self.delayed_id = None
+                return True
+            return False
+        return True
 
     # https://stackoverflow.com/questions/682504/what-is-a-clean-pythonic-way-to-have-multiple-constructors-in-python
     @classmethod
@@ -46,6 +77,7 @@ class HPacket:
 
         obj.bytearray = bytearray(string[1:].encode("iso-8859-1"))
         obj.is_edited = string[0] == '1'
+        obj.delayed_id = None
         return obj
 
     def __repr__(self):
@@ -58,26 +90,36 @@ class HPacket:
         return self.read_int(0)
 
     def __str__(self):
-        return "(id:{}, length:{}) -> {}".format(self.header_id(), len(self), bytes(self))
+        return "(id:{}, length:{}) -> {}".format(self.header_id() if self.delayed_id is None else self.delayed_id,
+                                                 len(self), bytes(self))
 
     def g_string(self, extension = None):
+        self.fill_id(extension)
         if extension is None:
             if HPacket.default_extension is None:
                 raise Exception('No extension given for packet <-> string conversion')
             else:
                 extension = HPacket.default_extension
+        if self.delayed_id is not None:
+            raise Exception('Please initialize the packet with packet.fill_id(ext, Direction.XXX), if that doesn\'t '
+                            'work, HarbleAPI does not contain your hash')
+
         return extension.packet_to_string(self)
 
     def g_expression(self, extension = None):
+        self.fill_id(extension)
         if extension is None:
             if HPacket.default_extension is None:
                 raise Exception('No extension given for packet <-> string conversion')
             else:
                 extension = HPacket.default_extension
+        if self.delayed_id is not None:
+            raise Exception('Please initialize the packet with packet.fill_id(ext, Direction.XXX)')
+
         return extension.packet_to_expression(self)
 
     def is_corrupted(self):
-        return len(self.bytearray) < 6 or self.read_int(0) != len(self.bytearray) - 4
+        return self.delayed_id is not None or len(self.bytearray) < 6 or self.read_int(0) != len(self.bytearray) - 4
 
     def reset(self):
         self.read_index = 6

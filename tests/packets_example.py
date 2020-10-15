@@ -26,7 +26,8 @@ def on_walk(message):
     print("Walking to x:{}, y={}".format(x, y))
 
     # send packet to server from HPacket() object
-    ext.send_to_server(HPacket(1843, 1)) # wave
+    # ext.send_to_server(HPacket(1843, 1)) # wave
+    ext.send_to_server(HPacket('RoomUserAction', 1))  # wave
 
     # 2 ways of sending packets from string representations
     ext.send_to_client(HPacket.from_string('{l}{u:1411}{i:0}{s:"hi"}{i:0}{i:23}{i:0}{i:2}', ext))
@@ -39,8 +40,8 @@ def on_speech(message):
     print("User said: {}".format(text))
 
 
-ext.intercept(Direction.TO_SERVER, on_walk, 3536)
-ext.intercept(Direction.TO_SERVER, on_speech, 2547)
+ext.intercept(Direction.TO_SERVER, on_walk, 'RoomUserWalk')
+ext.intercept(Direction.TO_SERVER, on_speech, 'RoomUserTalk')
 
 
 packet = HPacket(1231, "hi", 5, "old", False, True, "lol")
