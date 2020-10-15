@@ -5,9 +5,13 @@ from hparsers import HEntity, HFloorItem, HWallItem, HInventoryItem
 
 
 class RoomUsers:
-    def __init__(self, ext: Extension, room_users='RoomUsers', room_model='RoomModel', remove_user='RoomUserRemove'):
+    def __init__(self, ext: Extension, room_users='RoomUsers', room_model='RoomModel', remove_user='RoomUserRemove',
+                 request='RequestRoomHeightmap'):
         self.room_users = {}
         self.__callback_new_users = None
+
+        self.__ext = ext
+        self.__request_id = request
 
         ext.intercept(Direction.TO_CLIENT, self.__load_room_users, room_users)
         ext.intercept(Direction.TO_CLIENT, self.__clear_room_users, room_model)  # (clear users / new room entered)
@@ -33,13 +37,20 @@ class RoomUsers:
     def on_new_users(self, func):
         self.__callback_new_users = func
 
+    def request(self):
+        self.__ext.send_to_server(HPacket(self.__request_id))
+
 
 class RoomFurni:
-    def __init__(self, ext: Extension, floor_items='RoomFloorItems', wall_items='RoomWallItems'):
+    def __init__(self, ext: Extension, floor_items='RoomFloorItems', wall_items='RoomWallItems',
+                 request='RequestRoomHeightmap'):
         self.floor_furni = []
         self.wall_furni = []
         self.__callback_floor_furni = None
         self.__callback_wall_furni = None
+
+        self.__ext = ext
+        self.__request_id = request
 
         ext.intercept(Direction.TO_CLIENT, self.__floor_furni_load, floor_items)
         ext.intercept(Direction.TO_CLIENT, self.__wall_furni_load, wall_items)
@@ -59,6 +70,9 @@ class RoomFurni:
 
     def on_wall_furni_load(self, callback):
         self.__callback_wall_furni = callback
+
+    def request(self):
+        self.__ext.send_to_server(HPacket(self.__request_id))
 
 
 class Inventory:
