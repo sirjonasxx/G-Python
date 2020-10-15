@@ -1,4 +1,4 @@
-import hmessage
+from hdirection import Direction
 
 class HPacket:
     default_extension = None
@@ -25,7 +25,7 @@ class HPacket:
 
         self.is_edited = False
 
-    def fill_id(self, extension = None, direction = None):
+    def fill_id(self, extension = None, direction : Direction = None) -> bool:
         if self.delayed_id is not None:
             if extension is None:
                 if self.default_extension is None:
@@ -34,10 +34,10 @@ class HPacket:
             if direction is None:
                 if extension.harble_api is None:
                     return False
-                if (self.delayed_id in extension.harble_api[hmessage.Direction.TO_CLIENT]) is not \
-                    (self.delayed_id in extension.harble_api[hmessage.Direction.TO_SERVER]):
-                    direction = hmessage.Direction.TO_CLIENT if \
-                        (self.delayed_id in extension.harble_api[hmessage.Direction.TO_CLIENT]) else hmessage.Direction.TO_SERVER
+                if (self.delayed_id in extension.harble_api[Direction.TO_CLIENT]) is not \
+                    (self.delayed_id in extension.harble_api[Direction.TO_SERVER]):
+                    direction = Direction.TO_CLIENT if \
+                        (self.delayed_id in extension.harble_api[Direction.TO_CLIENT]) else Direction.TO_SERVER
                 else:
                     return False
 
@@ -93,7 +93,7 @@ class HPacket:
         return "(id:{}, length:{}) -> {}".format(self.header_id() if self.delayed_id is None else self.delayed_id,
                                                  len(self), bytes(self))
 
-    def g_string(self, extension = None):
+    def g_string(self, extension = None) -> str:
         self.fill_id(extension)
         if extension is None:
             if HPacket.default_extension is None:
@@ -106,7 +106,7 @@ class HPacket:
 
         return extension.packet_to_string(self)
 
-    def g_expression(self, extension = None):
+    def g_expression(self, extension = None) -> str:
         self.fill_id(extension)
         if extension is None:
             if HPacket.default_extension is None:
@@ -118,33 +118,33 @@ class HPacket:
 
         return extension.packet_to_expression(self)
 
-    def is_corrupted(self):
+    def is_corrupted(self) -> bool:
         return self.delayed_id is not None or len(self.bytearray) < 6 or self.read_int(0) != len(self.bytearray) - 4
 
-    def reset(self):
+    def reset(self) -> None:
         self.read_index = 6
 
-    def header_id(self):
+    def header_id(self) -> int:
         return self.read_ushort(4)
 
-    def fix_length(self):
+    def fix_length(self) -> None:
         self.replace_int(0, len(self.bytearray) - 4)
 
-    def read_int(self, index=None):
+    def read_int(self, index=None) -> int:
         if index is None:
             index = self.read_index
             self.read_index += 4
 
         return int.from_bytes(self.bytearray[index:index + 4], byteorder='big')
 
-    def read_ushort(self, index=None):
+    def read_ushort(self, index=None) -> int:
         if index is None:
             index = self.read_index
             self.read_index += 2
 
         return int.from_bytes(self.bytearray[index:index + 2], byteorder='big', signed=False)
 
-    def read_string(self, index=None, head=2, encoding='iso-8859-1'):
+    def read_string(self, index=None, head=2, encoding='iso-8859-1') -> str:
         if index is None:
             index = self.read_index
             self.read_index += head + int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
@@ -152,24 +152,24 @@ class HPacket:
         len = int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
         return self.bytearray[index + head:index + head + len].decode(encoding)
 
-    def read_bytes(self, len, index=None):
+    def read_bytes(self, len, index=None) -> bytearray:
         if index is None:
             index = self.read_index
             self.read_index += len
 
         return self.bytearray[index:index + len]
 
-    def read_byte(self, index=None):
+    def read_byte(self, index=None) -> int:
         if index is None:
             index = self.read_index
             self.read_index += 1
 
         return self.bytearray[index]
 
-    def read_bool(self, index=None):
+    def read_bool(self, index=None) -> bool:
         return self.read_byte(index) != 0
 
-    def read(self, structure):
+    def read(self, structure) -> list:
         read_methods = {
             'i': self.read_int,
             's': self.read_string,
@@ -178,19 +178,19 @@ class HPacket:
         }
         return [read_methods[value_type]() for value_type in structure]
 
-    def replace_int(self, index, value):
+    def replace_int(self, index, value) -> None:
         self.bytearray[index:index + 4] = value.to_bytes(4, byteorder='big')
         self.is_edited = True
 
-    def replace_ushort(self, index, value):
+    def replace_ushort(self, index, value) -> None:
         self.bytearray[index:index + 2] = value.to_bytes(2, byteorder='big', signed=False)
         self.is_edited = True
 
-    def replace_bool(self, index, value):
+    def replace_bool(self, index, value) -> None:
         self.bytearray[index] = value
         self.is_edited = True
 
-    def replace_string(self, index, value, encoding='utf-8'):
+    def replace_string(self, index, value, encoding='utf-8') -> None:
         old_len = self.read_ushort(index)
         part1 = self.bytearray[0:index]
         part3 = self.bytearray[index + 2 + old_len:]

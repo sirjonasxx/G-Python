@@ -1,9 +1,8 @@
 import sys
 
-from gextension import Extension
-from hmessage import Direction, HMessage
-from hpacket import HPacket
 import hparsers
+from gextension import Extension
+from hmessage import Direction
 
 extension_info = {
     "title": "User profile",

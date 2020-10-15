@@ -1,4 +1,5 @@
 import sys
+
 from gextension import Extension
 
 extension_info = {

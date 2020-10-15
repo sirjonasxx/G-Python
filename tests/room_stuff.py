@@ -1,9 +1,7 @@
 import sys
 
 from gextension import Extension
-from hmessage import Direction, HMessage
-from hpacket import HPacket
-import hparsers
+from htools import RoomFurni, RoomUsers
 
 extension_info = {
     "title": "Room stuff",
@@ -15,42 +13,9 @@ extension_info = {
 ext = Extension(extension_info, sys.argv)
 ext.start()
 
-room_users = {}
+room_furni = RoomFurni(ext)
+room_furni.on_floor_furni_load(lambda furni: print("Found {} floor furniture in room".format(len(furni))))
+room_furni.on_wall_furni_load(lambda furni: print("Found {} wall furniture in room".format(len(furni))))
 
-
-def load_room_users(message):
-    users = hparsers.HEntity.parse(message.packet)
-    for user in users:
-        room_users[user.index] = user
-
-    print(list(map(str, users)))
-
-
-def clear_room_users(_):
-    room_users.clear()
-
-
-floor_furni = []
-wall_furni = []
-
-
-def floor_furni_load(message):
-    global floor_furni
-    floor_furni = hparsers.HFloorItem.parse(message.packet)
-
-    print("Found {} floor furniture in room".format(len(floor_furni)))
-
-
-def wall_furni_load(message):
-    global wall_furni
-    wall_furni = hparsers.HWallItem.parse(message.packet)
-
-    print("Found {} wall furniture in room".format(len(wall_furni)))
-
-
-ext.intercept(Direction.TO_CLIENT, load_room_users, 'RoomUsers')
-ext.intercept(Direction.TO_CLIENT, clear_room_users, 'RoomModel')       # (clear users / new room entered)
-
-ext.intercept(Direction.TO_CLIENT, floor_furni_load, 'RoomFloorItems')
-# ext.intercept(Direction.TO_CLIENT, wall_furni_load, 703)              # RoomWallItems
-ext.intercept(Direction.TO_CLIENT, wall_furni_load, 'RoomWallItems')
+room_users = RoomUsers(ext)
+room_users.on_new_users(lambda users: print(list(map(str, users))))

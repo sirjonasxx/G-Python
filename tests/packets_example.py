@@ -1,9 +1,8 @@
 import sys
 
 from gextension import Extension
-from hmessage import Direction, HMessage
+from hmessage import Direction
 from hpacket import HPacket
-import hparsers
 
 extension_info = {
     "title": "Packets example",
