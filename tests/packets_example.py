@@ -14,8 +14,6 @@ extension_info = {
 ext = Extension(extension_info, sys.argv)
 ext.start()
 
-print(ext.request_flags())
-
 
 def on_walk(message):
     # packet = message.packet
@@ -29,10 +27,8 @@ def on_walk(message):
     ext.send_to_server(HPacket('RoomUserAction', 1))  # wave
 
     # 2 ways of sending packets from string representations
-    ext.send_to_client(HPacket.from_string('{l}{u:1411}{i:0}{s:"hi"}{i:0}{i:23}{i:0}{i:2}', ext))
-    ext.send_to_client(
-        HPacket.from_string('[0][0][0][26][5][131][0][0][0][0][0][2]ho[0][0][0][0][0][0][0][3][0][0][0][0][0][0][0][2]',
-                            ext))
+    ext.send_to_client('{l}{u:1411}{i:0}{s:"hi"}{i:0}{i:23}{i:0}{i:2}')
+    ext.send_to_client(HPacket.from_string('[0][0][0][26][5][131][0][0][0][0][0][2]ho[0][0][0][0][0][0][0][3][0][0][0][0][0][0][0][2]', ext))
 
 
 def on_speech(message):
