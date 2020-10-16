@@ -1,7 +1,7 @@
-from gextension import Extension
-from hmessage import HMessage, Direction
-from hpacket import HPacket
-from hparsers import HEntity, HFloorItem, HWallItem, HInventoryItem
+from .gextension import Extension
+from .hmessage import HMessage, Direction
+from .hpacket import HPacket
+from .hparsers import HEntity, HFloorItem, HWallItem, HInventoryItem
 
 
 class RoomUsers:

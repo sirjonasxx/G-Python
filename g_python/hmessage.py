@@ -1,5 +1,5 @@
-from hpacket import HPacket
-from hdirection import Direction
+from .hpacket import HPacket
+from .hdirection import Direction
 
 
 class HMessage:

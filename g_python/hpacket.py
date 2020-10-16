@@ -1,4 +1,4 @@
-from hdirection import Direction
+from .hdirection import Direction
 
 
 class HPacket:

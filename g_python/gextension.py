@@ -1,8 +1,8 @@
 import socket
 import threading
 from enum import Enum
-from hpacket import HPacket
-from hmessage import HMessage, Direction
+from .hpacket import HPacket
+from .hmessage import HMessage, Direction
 import json
 
 
