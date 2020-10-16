@@ -4,7 +4,7 @@ from gextension import Extension
 
 extension_info = {
     "title": "Extension stuff",
-    "description": "G-Python test",
+    "description": "g_python test",
     "version": "1.0",
     "author": "sirjonasxx"
 }

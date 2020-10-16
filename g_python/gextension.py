@@ -221,7 +221,7 @@ class Extension:
             elif message_type == INCOMING_MESSAGES.INIT:
                 self.__raise_event('init')
                 self.write_to_console(
-                    'G-Python extension "{}" sucessfully initialized'.format(self._extension_info['title']),
+                    'g_python extension "{}" sucessfully initialized'.format(self._extension_info['title']),
                     'green',
                     False
                 )

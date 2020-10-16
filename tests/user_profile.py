@@ -6,7 +6,7 @@ from hmessage import Direction
 
 extension_info = {
     "title": "User profile",
-    "description": "G-Python test",
+    "description": "g_python test",
     "version": "1.0",
     "author": "sirjonasxx"
 }

@@ -5,7 +5,7 @@ from htools import RoomFurni, RoomUsers
 
 extension_info = {
     "title": "Room stuff",
-    "description": "G-Python test",
+    "description": "g_python test",
     "version": "1.0",
     "author": "sirjonasxx"
 }

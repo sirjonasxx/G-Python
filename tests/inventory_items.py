@@ -5,7 +5,7 @@ from htools import Inventory
 
 extension_info = {
     "title": "Inventory items",
-    "description": "G-Python test",
+    "description": "g_python test",
     "version": "1.0",
     "author": "sirjonasxx"
 }

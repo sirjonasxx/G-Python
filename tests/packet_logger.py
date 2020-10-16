@@ -5,7 +5,7 @@ from hmessage import Direction
 
 extension_info = {
     "title": "Packet Logger",
-    "description": "G-Python test",
+    "description": "g_python test",
     "version": "1.0",
     "author": "sirjonasxx"
 }

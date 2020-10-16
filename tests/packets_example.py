@@ -6,7 +6,7 @@ from hpacket import HPacket
 
 extension_info = {
     "title": "Packets example",
-    "description": "G-Python test",
+    "description": "g_python test",
     "version": "1.0",
     "author": "sirjonasxx"
 }
