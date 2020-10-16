@@ -13,12 +13,14 @@ extension_info = {
 ext = Extension(extension_info, sys.argv, {"use_click_trigger": True})
 ext.start()
 
-inventory = Inventory(ext)
+inv = Inventory(ext)
+# inventory items will be available under:
+# inv.inventory_items           (list of HInventoryItem)
 
 
 def request_inventory():
     print("Requesting inventory")
-    inventory.request()
+    inv.request()
 
 
 def on_inventory_load(items):
@@ -26,4 +28,4 @@ def on_inventory_load(items):
 
 
 ext.on_event('double_click', request_inventory)
-inventory.on_inventory_load(on_inventory_load)
+inv.on_inventory_load(on_inventory_load)

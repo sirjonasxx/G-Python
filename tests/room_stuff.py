@@ -19,3 +19,8 @@ room_furni.on_wall_furni_load(lambda furni: print("Found {} wall furniture in ro
 
 room_users = RoomUsers(ext)
 room_users.on_new_users(lambda users: print(list(map(str, users))))
+
+# current room users & furniture are always available under:
+# room_furni.floor_furni        (list of HFloorItem)
+# room_furni.wall_furni         (list of HWallItem)
+# room_users.room_users         (list of HEntitity)
