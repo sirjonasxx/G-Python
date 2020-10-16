@@ -1,7 +1,7 @@
 import sys
 
-from gextension import Extension
-from htools import Inventory
+from g_python.gextension import Extension
+from g_python.htools import Inventory
 
 extension_info = {
     "title": "Inventory items",

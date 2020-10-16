@@ -1,6 +1,6 @@
 import sys
 
-from gextension import Extension
+from g_python.gextension import Extension
 
 extension_info = {
     "title": "Extension stuff",

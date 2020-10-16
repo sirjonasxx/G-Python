@@ -1,8 +1,8 @@
 import sys
 
-import hparsers
-from gextension import Extension
-from hmessage import Direction
+from g_python import hparsers
+from g_python.gextension import Extension
+from g_python.hmessage import Direction
 
 extension_info = {
     "title": "User profile",

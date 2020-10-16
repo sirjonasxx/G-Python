@@ -1,7 +1,7 @@
 import sys
 
-from gextension import Extension
-from htools import RoomFurni, RoomUsers
+from g_python.gextension import Extension
+from g_python.htools import RoomFurni, RoomUsers
 
 extension_info = {
     "title": "Room stuff",
