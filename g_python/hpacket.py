@@ -122,7 +122,7 @@ class HPacket:
             index = self.read_index
             self.read_index += 4
 
-        return int.from_bytes(self.bytearray[index:index + 4], byteorder='big')
+        return int.from_bytes(self.bytearray[index:index + 4], byteorder='big', signed=True)
 
     def read_ushort(self, index=None) -> int:
         if index is None:
@@ -166,7 +166,7 @@ class HPacket:
         return [read_methods[value_type]() for value_type in structure]
 
     def replace_int(self, index, value) -> None:
-        self.bytearray[index:index + 4] = value.to_bytes(4, byteorder='big')
+        self.bytearray[index:index + 4] = value.to_bytes(4, byteorder='big', signed=True)
         self.is_edited = True
 
     def replace_ushort(self, index, value) -> None:
@@ -191,7 +191,7 @@ class HPacket:
         self.is_edited = True
 
     def append_int(self, value):
-        self.bytearray.extend(value.to_bytes(4, byteorder='big'))
+        self.bytearray.extend(value.to_bytes(4, byteorder='big', signed=True))
         self.fix_length()
         self.is_edited = True
         return self
