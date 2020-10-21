@@ -38,6 +38,7 @@ class RoomUsers:
         self.__callback_new_users = func
 
     def request(self):
+        self.room_users = {}
         self.__ext.send_to_server(HPacket(self.__request_id))
 
 
@@ -72,6 +73,8 @@ class RoomFurni:
         self.__callback_wall_furni = callback
 
     def request(self):
+        self.floor_furni = []
+        self.wall_furni = []
         self.__ext.send_to_server(HPacket(self.__request_id))
 
 
