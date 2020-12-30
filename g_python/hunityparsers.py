@@ -43,7 +43,7 @@ class HUnityStatus:
 
     def __str__(self):
         return '<HUnityStatus> [{}] - X: {} - Y: {} - Z: {} - head {} - body {}'\
-            .format(self.index, self.tile.x, self.tile.y, self.tile.y, self.headFacing.name, self.bodyFacing.name)
+            .format(self.index, self.tile.x, self.tile.y, self.tile.z, self.headFacing.name, self.bodyFacing.name)
 
     @classmethod
     def parse(cls, packet):
