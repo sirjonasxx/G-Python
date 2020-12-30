@@ -1,21 +1,15 @@
 from enum import Enum
 
-from g_python.hparsers import HPoint, HEntityType
+from .hparsers import HPoint, HEntityType, HDirection
 
 
 class HUnityEntity:
     def __init__(self, packet):
         self.id, self.name, self.motto, self.figure_id, self.index, x, y, z, _, entity_type_id = \
             packet.read('lsssiiisii')
-
-        try:
-            z = float(z)
-        except ValueError:
-            z = 0.0
-
-        self.tile = HPoint(x, y, z)
+        self.tile = get_tile_from_coords(x, y, z)
         self.entity_type = HEntityType(entity_type_id)
-
+        
         self.stuff = []
         if self.entity_type == HEntityType.HABBO:
             self.gender = packet.read_string()
@@ -33,10 +27,33 @@ class HUnityEntity:
                 self.stuff.append(packet.read_ushort())
 
     def __str__(self):
-        return '{}: {} - {}'.format(self.index, self.name, self.entity_type.name)
+        return '<HUnityEntity> [{}] {} - {}'.format(self.index, self.name, self.entity_type.name)
 
     @classmethod
     def parse(cls, packet):
-        u1 = packet.read_bytes(2)
-        length = u1[0] << 8 | u1[1]
-        return [HUnityEntity(packet) for _ in range(length)]
+        return [HUnityEntity(packet) for _ in range(packet.read_ushort())]
+
+
+class HUnityStatus:
+    def __init__(self, packet):
+        self.index, x, y, z, dir1, dir2, action = packet.read('iiisiis')
+        self.tile = get_tile_from_coords(x, y, z)
+        self.headFacing = HDirection(dir1)
+        self.bodyFacing = HDirection(dir2)
+
+    def __str__(self):
+        return '<HUnityStatus> [{}] - X: {} - Y: {} - Z: {} - head {} - body {}'\
+            .format(self.index, self.tile.x, self.tile.y, self.tile.y, self.headFacing.name, self.bodyFacing.name)
+
+    @classmethod
+    def parse(cls, packet):
+        return [HUnityStatus(packet) for _ in range(packet.read_ushort())]
+
+
+def get_tile_from_coords(x, y, z) -> HPoint:
+    try:
+        z = float(z)
+    except ValueError:
+        z = 0.0
+
+    return HPoint(x, y, z)
