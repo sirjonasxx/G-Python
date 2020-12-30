@@ -136,7 +136,7 @@ class HPacket:
             index = self.read_index
             self.read_index += 8
 
-        return int.from_bytes(self.bytearray[index:index + 8], byteorder='big', signed=False)
+        return int.from_bytes(self.bytearray[index:index + 8], byteorder='big', signed=True)
 
     def read_string(self, index=None, head=2, encoding='iso-8859-1') -> str:
         if index is None:
