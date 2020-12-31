@@ -9,7 +9,7 @@ class HUnityEntity:
             packet.read('lsssiiisii')
         self.tile = get_tile_from_coords(x, y, z)
         self.entity_type = HEntityType(entity_type_id)
-        
+
         self.stuff = []
         if self.entity_type == HEntityType.HABBO:
             self.gender = packet.read_string()
@@ -36,14 +36,23 @@ class HUnityEntity:
 
 class HUnityStatus:
     def __init__(self, packet):
-        self.index, x, y, z, dir1, dir2, action = packet.read('iiisiis')
+        self.index, x, y, z, dir1, dir2, self.action = packet.read('iiisiis')
         self.tile = get_tile_from_coords(x, y, z)
         self.headFacing = HDirection(dir1)
         self.bodyFacing = HDirection(dir2)
+        self.nextTile = self.predict_next_tile()
 
     def __str__(self):
-        return '<HUnityStatus> [{}] - X: {} - Y: {} - Z: {} - head {} - body {}'\
-            .format(self.index, self.tile.x, self.tile.y, self.tile.z, self.headFacing.name, self.bodyFacing.name)
+        return '<HUnityStatus> [{}] - X: {} - Y: {} - Z: {} - head {} - body {} - next tile {}'\
+            .format(self.index, self.tile.x, self.tile.y, self.tile.z, self.headFacing.name, self.bodyFacing.name, self.nextTile)
+
+    def predict_next_tile(self):
+        actions = self.action.split('/mv ')
+        if len(actions) > 1:
+            (x, y, z) = actions[1].replace('/', '').split(',')
+            return get_tile_from_coords(int(x), int(y), z)
+        else:
+            return HPoint(-1, -1, 0.0)
 
     @classmethod
     def parse(cls, packet):
