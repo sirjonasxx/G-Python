@@ -91,7 +91,7 @@ class HEntity:
             self.stuff.extend(packet.read('iisiBBBBBBis'))
         elif self.entity_type == HEntityType.BOT:
             self.stuff.extend(packet.read('sis'))
-            self.stuff.append([packet.read_ushort() for _ in range(packet.read_int())])
+            self.stuff.append([packet.read_short() for _ in range(packet.read_int())])
 
     def __str__(self):
         return '{}: {} - {}'.format(self.index, self.name, self.entity_type.name)

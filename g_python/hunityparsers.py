@@ -24,14 +24,14 @@ class HUnityEntity:
             self.gender, self.owner_id, self.owner_name, arr_length = packet.read('slsu')
             self.stuff.append(arr_length)
             for _ in range(arr_length):
-                self.stuff.append(packet.read_ushort())
+                self.stuff.append(packet.read_short())
 
     def __str__(self):
         return '<HUnityEntity> [{}] {} - {}'.format(self.index, self.name, self.entity_type.name)
 
     @classmethod
     def parse(cls, packet):
-        return [HUnityEntity(packet) for _ in range(packet.read_ushort())]
+        return [HUnityEntity(packet) for _ in range(packet.read_short())]
 
 
 class HUnityStatus:
@@ -56,7 +56,7 @@ class HUnityStatus:
 
     @classmethod
     def parse(cls, packet):
-        return [HUnityStatus(packet) for _ in range(packet.read_ushort())]
+        return [HUnityStatus(packet) for _ in range(packet.read_short())]
 
 
 def get_tile_from_coords(x, y, z) -> HPoint:

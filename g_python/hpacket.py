@@ -112,7 +112,7 @@ class HPacket:
         self.read_index = 6
 
     def header_id(self) -> int:
-        return self.read_ushort(4)
+        return self.read_short(4)
 
     def fix_length(self) -> None:
         self.replace_int(0, len(self.bytearray) - 4)
@@ -124,12 +124,12 @@ class HPacket:
 
         return int.from_bytes(self.bytearray[index:index + 4], byteorder='big', signed=True)
 
-    def read_ushort(self, index=None) -> int:
+    def read_short(self, index=None) -> int:
         if index is None:
             index = self.read_index
             self.read_index += 2
 
-        return int.from_bytes(self.bytearray[index:index + 2], byteorder='big', signed=False)
+        return int.from_bytes(self.bytearray[index:index + 2], byteorder='big', signed=True)
 
     def read_long(self, index=None) -> int:
         if index is None:
@@ -169,7 +169,7 @@ class HPacket:
             's': self.read_string,
             'b': self.read_byte,
             'B': self.read_bool,
-            'u': self.read_ushort,
+            'u': self.read_short,
             'l': self.read_long
         }
         return [read_methods[value_type]() for value_type in structure]
@@ -187,7 +187,7 @@ class HPacket:
         self.is_edited = True
 
     def replace_string(self, index, value, encoding='utf-8') -> None:
-        old_len = self.read_ushort(index)
+        old_len = self.read_short(index)
         part1 = self.bytearray[0:index]
         part3 = self.bytearray[index + 2 + old_len:]
 
