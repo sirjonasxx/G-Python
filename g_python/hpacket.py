@@ -138,13 +138,6 @@ class HPacket:
 
         return int.from_bytes(self.bytearray[index:index + 8], byteorder='big', signed=True)
 
-    def read_long(self, index=None) -> int:
-        if index is None:
-            index = self.read_index
-            self.read_index += 8
-
-        return int.from_bytes(self.bytearray[index:index + 8], byteorder='big', signed=False)
-
     def read_string(self, index=None, head=2, encoding='iso-8859-1') -> str:
         if index is None:
             index = self.read_index
@@ -173,7 +166,6 @@ class HPacket:
     def read(self, structure) -> list:
         read_methods = {
             'i': self.read_int,
-            'l': self.read_long,
             's': self.read_string,
             'b': self.read_byte,
             'B': self.read_bool,
