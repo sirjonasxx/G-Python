@@ -138,6 +138,13 @@ class HPacket:
 
         return int.from_bytes(self.bytearray[index:index + 8], byteorder='big', signed=True)
 
+    def read_long(self, index=None) -> int:
+        if index is None:
+            index = self.read_index
+            self.read_index += 8
+
+        return int.from_bytes(self.bytearray[index:index + 8], byteorder='big', signed=False)
+
     def read_string(self, index=None, head=2, encoding='iso-8859-1') -> str:
         if index is None:
             index = self.read_index
@@ -166,6 +173,7 @@ class HPacket:
     def read(self, structure) -> list:
         read_methods = {
             'i': self.read_int,
+            'l': self.read_long,
             's': self.read_string,
             'b': self.read_byte,
             'B': self.read_bool,
@@ -180,6 +188,10 @@ class HPacket:
 
     def replace_ushort(self, index, value) -> None:
         self.bytearray[index:index + 2] = value.to_bytes(2, byteorder='big', signed=False)
+        self.is_edited = True
+
+    def replace_long(self, index, value) -> None:
+        self.bytearray[index:index + 8] = value.to_bytes(8, byteorder='big', signed=False)
         self.is_edited = True
 
     def replace_bool(self, index, value) -> None:
@@ -207,6 +219,12 @@ class HPacket:
 
     def append_ushort(self, value):
         self.bytearray.extend(value.to_bytes(2, byteorder='big', signed=False))
+        self.fix_length()
+        self.is_edited = True
+        return self
+
+    def append_long(self, value):
+        self.bytearray.extend(value.to_bytes(8, byteorder='big', signed=False))
         self.fix_length()
         self.is_edited = True
         return self
