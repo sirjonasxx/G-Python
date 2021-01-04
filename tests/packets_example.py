@@ -1,7 +1,8 @@
 import sys
+from time import sleep
 
 from g_python.gextension import Extension
-from g_python.hmessage import Direction
+from g_python.hmessage import Direction, HMessage
 from g_python.hpacket import HPacket
 
 extension_info = {
@@ -31,14 +32,23 @@ def on_walk(message):
     ext.send_to_client(HPacket.from_string('[0][0][0][26][5][131][0][0][0][0][0][2]ho[0][0][0][0][0][0][0][3][0][0][0][0][0][0][0][2]', ext))
 
 
+# intercepted async, you can't modify it
 def on_speech(message):
+    sleep(4)
     (text, color, index) = message.packet.read('sii')
-    message.is_blocked = (text == 'blocked')  # block packet if speech equals "blocked"
-    print("User said: {}".format(text))
+    print("User said: {}, 4 seconds ago".format(text))
 
+# intercepted async, but you can modify it
+def on_shout(message : HMessage):
+    sleep(2)
+    (text, color) = message.packet.read('si')
+    message.is_blocked = (text == 'blocked')  # block packet if speech equals "blocked"
+    print("User shouted: {}, 2 seconds ago".format(text))
+    message.packet.replace_string(6, "G - " + text)
 
 ext.intercept(Direction.TO_SERVER, on_walk, 'RoomUserWalk')
-ext.intercept(Direction.TO_SERVER, on_speech, 'RoomUserTalk')
+ext.intercept(Direction.TO_SERVER, on_speech, 'RoomUserTalk', mode='async')
+ext.intercept(Direction.TO_SERVER, on_shout, 'RoomUserShout', mode='async_modify')
 
 packet = HPacket(1231, "hi", 5, "old", False, True, "lol")
 result = packet.g_expression(ext)  # get G-Earth's predicted expression for the packet above

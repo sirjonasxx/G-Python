@@ -303,7 +303,7 @@ class Extension:
             self.__send_to_stream(wrapper_packet)
 
             if old_settings is not None:
-                packet.replace_ushort(4, old_settings[0])
+                packet.replace_short(4, old_settings[0])
                 packet.harble_id = old_settings[2]
                 packet.is_edited = old_settings[1]
 
@@ -348,13 +348,37 @@ class Extension:
         else:
             self.__events[event_name] = [func]
 
-    def intercept(self, direction: Direction, callback, id=-1):
+    def intercept(self, direction: Direction, callback, id=-1, mode='default'):
         """
         :param direction: Direction.TOCLIENT or Direction.TOSERVER
         :param callback: function that takes HMessage as an argument
         :param id: header_id / hash / name
+        :param mode: can be: * default (blocking)
+                             * async (async, can't modify packet, doesn't disturb packet flow)
+                             * async_modify (async, can modify, doesn't block other packets, disturbs packet flow)
         :return:
         """
+        original_callback = callback
+
+        if mode == 'async':
+            def new_callback(hmessage : HMessage):
+                copy = HMessage(hmessage.packet, hmessage.direction, hmessage._index, hmessage.is_blocked)
+                t = threading.Thread(target=original_callback, args=[copy])
+                t.start()
+            callback = new_callback
+
+        if mode == 'async_modify':
+            def callback_send(hmessage : HMessage):
+                original_callback(hmessage)
+                if not hmessage.is_blocked:
+                    self.__send(hmessage.direction, hmessage.packet)
+
+            def new_callback(hmessage : HMessage):
+                hmessage.is_blocked = True
+                copy = HMessage(hmessage.packet, hmessage.direction, hmessage._index, False)
+                t = threading.Thread(target=callback_send, args=[copy])
+                t.start()
+            callback = new_callback
 
         if id not in self.__intercept_listeners[direction]:
             self.__intercept_listeners[direction][id] = []
