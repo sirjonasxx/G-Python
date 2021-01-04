@@ -10,7 +10,7 @@ class HPacket:
         self.read_index = 6
         self.bytearray = bytearray(b'\x00\x00\x00\x02\xff\xff')
         if self.harble_id is None:
-            self.replace_ushort(4, id)
+            self.replace_short(4, id)
         self.is_edited = False
 
         for object in objects:
@@ -34,7 +34,7 @@ class HPacket:
 
             if extension.harble_api is not None and self.harble_id in extension.harble_api[direction]:
                 edited_old = self.is_edited
-                self.replace_ushort(4, extension.harble_api[direction][self.harble_id]['Id'])
+                self.replace_short(4, extension.harble_api[direction][self.harble_id]['Id'])
                 self.is_edited = edited_old
                 self.harble_id = None
                 return True
@@ -178,8 +178,8 @@ class HPacket:
         self.bytearray[index:index + 4] = value.to_bytes(4, byteorder='big', signed=True)
         self.is_edited = True
 
-    def replace_ushort(self, index, value) -> None:
-        self.bytearray[index:index + 2] = value.to_bytes(2, byteorder='big', signed=False)
+    def replace_short(self, index, value) -> None:
+        self.bytearray[index:index + 2] = value.to_bytes(2, byteorder='big', signed=True)
         self.is_edited = True
 
     def replace_long(self, index, value) -> None:
@@ -209,8 +209,8 @@ class HPacket:
         self.is_edited = True
         return self
 
-    def append_ushort(self, value):
-        self.bytearray.extend(value.to_bytes(2, byteorder='big', signed=False))
+    def append_short(self, value):
+        self.bytearray.extend(value.to_bytes(2, byteorder='big', signed=True))
         self.fix_length()
         self.is_edited = True
         return self
