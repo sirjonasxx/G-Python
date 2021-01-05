@@ -1,6 +1,40 @@
 from enum import Enum
 
 
+class HBubble(Enum):
+    NORMAL: 0
+    RED: 3
+    BLUE: 4
+    YELLOW: 5
+    GREEN: 6
+    BLACK: 7
+    ZOMBIE: 9
+    SKULL: 10
+    PINK: 12
+    PURPLE: 13
+    ORANGE: 14
+    HEART: 16
+    ROSE: 17
+    PIG: 19
+    DOG: 20
+    DUCK: 21
+    DRAGON: 22
+    STAFF: 23
+    BATS: 24
+    CONSOLE: 25
+    STORM: 27
+    PIRATE: 29
+    AMBASSADOR: 37
+        
+
+class HDance(Enum):
+    NONE = 0
+    NORMAL = 1
+    POGOMOGO = 2
+    DUCKFUNK = 3
+    THEROLLIE = 4
+    
+    
 class HAction(Enum):
     NONE = 0
     MOVE = 1
