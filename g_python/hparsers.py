@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class HBubble(enum):
+class HBubble(Enum):
     NORMAL: 0
     RED: 3
     BLUE: 4
@@ -27,7 +27,7 @@ class HBubble(enum):
     AMBASSADOR: 37
         
 
-class HDance(enum):
+class HDance(Enum):
     NONE = 0
     NORMAL = 1
     POGOMOGO = 2
