@@ -75,10 +75,7 @@ class UnityRoomUsers:
             try:
                 user = self.room_users[update.index]
                 if isinstance(user, HUnityEntity):
-                    user.tile = update.tile
-                    user.nextTile = update.nextTile
-                    user.headFacing = update.headFacing
-                    user.bodyFacing = update.bodyFacing
+                    user.try_update(update)
             except KeyError:
                 pass
             finally:
