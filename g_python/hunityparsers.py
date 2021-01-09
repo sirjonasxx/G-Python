@@ -32,9 +32,18 @@ class HUnityEntity:
     def __str__(self):
         return '<HUnityEntity> [{}] {} - {}'.format(self.index, self.name, self.entity_type.name)
 
+    def try_update(self, update):
+        self.tile = update.tile
+        self.nextTile = update.nextTile
+        self.headFacing = update.headFacing
+        self.bodyFacing = update.bodyFacing
+
+
     @classmethod
     def parse(cls, packet):
         return [HUnityEntity(packet) for _ in range(packet.read_short())]
+
+
 
 
 class HUnityStatus:
