@@ -43,7 +43,7 @@ class RoomUsers:
 
 
 class RoomFurni:
-    def __init__(self, ext: Extension, floor_items='RoomFloorItems', wall_items='RoomWallItems',
+    def __init__(self, ext: Extension, floor_items=32, wall_items='RoomWallItems',
                  request='RequestRoomHeightmap'):
         self.floor_furni = []
         self.wall_furni = []

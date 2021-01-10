@@ -1,4 +1,5 @@
 from enum import Enum
+import struct
 
 
 class HBubble(Enum):
@@ -142,16 +143,16 @@ def read_stuff(packet, category):
     if cat2 == 0:  # legacy
         stuff.append(packet.read_string())
     if cat2 == 1:  # map
-        stuff.append([packet.read('ss') for _ in range(packet.read_int())])
+        stuff.append([packet.read('ss') for _ in range(packet.read_short())])
     if cat2 == 2:  # string array
-        stuff.append([packet.read_string() for _ in range(packet.read_int())])
+        stuff.append([packet.read_string() for _ in range(packet.read_short())])
     if cat2 == 3:  # vote results
         stuff.extend(packet.read('si'))
     if cat2 == 5:  # int array
-        stuff.append([packet.read_int() for _ in range(packet.read_int())])
+        stuff.append([packet.read_int() for _ in range(packet.read_short())])
     if cat2 == 6:  # highscores
         stuff.extend(packet.read('sii'))
-        stuff.append([(packet.read_int(), [packet.read_string() for _ in range(packet.read_int())]) for _ in
+        stuff.append([(packet.read_int(), [packet.read_string() for _ in range(packet.read_short())]) for _ in
                       range(packet.read_int())])
     if cat2 == 7:  # crackables
         stuff.extend(packet.read('sii'))
@@ -164,15 +165,21 @@ def read_stuff(packet, category):
 
 class HFloorItem:
     def __init__(self, packet):
-        self.id, self.type_id, x, y, facing_id, z = packet.read('iiiiis')
-        self.tile = HPoint(x, y, float(z))
+        self.id, self.type_id, x, y, facing_id = packet.read('liiii')
+
+        # https://en.wikipedia.org/wiki/IEEE_754
+        z = struct.unpack('>f', bytearray(packet.read('bbbb')))[0]
+
+        self.tile = HPoint(x, y, z)
         self.facing = HDirection(facing_id)
 
-        h, _, self.category = packet.read('sii')
-        self.height = float(h)
+        # another weird float
+        self.height = struct.unpack('>f', bytearray(packet.read('bbbb')))[0]
+
+        a, b, self.category = packet.read('iii')
         self.stuff = read_stuff(packet, self.category)
 
-        self.seconds_to_expiration, self.usage_policy, self.owner_id = packet.read('iii')
+        self.seconds_to_expiration, self.usage_policy, self.owner_id = packet.read('iil')
         self.owner = None  # expected to be filled in by parse class method
 
         if self.type_id < 0:
@@ -181,11 +188,11 @@ class HFloorItem:
     @classmethod
     def parse(cls, packet):
         owners = {}
-        for _ in range(packet.read_int()):
-            id = packet.read_int()
+        for _ in range(packet.read_short()):
+            id = packet.read_long()
             owners[id] = packet.read_string()
 
-        furnis = [HFloorItem(packet) for _ in range(packet.read_int())]
+        furnis = [HFloorItem(packet) for _ in range(packet.read_short())]
         for furni in furnis:
             furni.owner = owners[furni.owner_id]
 
