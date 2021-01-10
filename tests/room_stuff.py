@@ -20,7 +20,7 @@ def print_furnis(furnis):
 room_users = UnityRoomUsers(ext)
 room_users.on_new_users(lambda users: print(list(map(str, users))))
 
-room_furni = RoomFurni(ext)
+room_furni = UnityRoomFurni(ext)
 room_furni.on_floor_furni_load(lambda furnis: print_furnis(furnis))
 
 '''
