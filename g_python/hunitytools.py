@@ -2,7 +2,8 @@ import threading
 
 from .gextension import Extension
 from .hmessage import HMessage, Direction
-from .hunityparsers import HUnityEntity, HUnityStatus
+from .hpacket import HPacket
+from .hunityparsers import HUnityEntity, HFUnityFloorItem
 
 
 class UnityRoomUsers:
@@ -87,3 +88,39 @@ class UnityRoomUsers:
 
     def try_updates(self, updates):
         self.__start_update_processing_thread(updates)
+
+
+class UnityRoomFurni:
+    def __init__(self, ext: Extension, floor_items=32, wall_items='RoomWallItems',
+                 request='RequestRoomHeightmap'):
+        self.floor_furni = []
+        self.wall_furni = []
+        self.__callback_floor_furni = None
+        self.__callback_wall_furni = None
+
+        self.__ext = ext
+        self.__request_id = request
+
+        ext.intercept(Direction.TO_CLIENT, self.__floor_furni_load, floor_items)
+        ext.intercept(Direction.TO_CLIENT, self.__wall_furni_load, wall_items)
+
+    def __floor_furni_load(self, message):
+        self.floor_furni = HFUnityFloorItem.parse(message.packet)
+        if self.__callback_floor_furni is not None:
+            self.__callback_floor_furni(self.floor_furni)
+
+    def __wall_furni_load(self, message):
+        self.wall_furni = HWallItem.parse(message.packet)
+        if self.__callback_wall_furni is not None:
+            self.__callback_wall_furni(self.wall_furni)
+
+    def on_floor_furni_load(self, callback):
+        self.__callback_floor_furni = callback
+
+    def on_wall_furni_load(self, callback):
+        self.__callback_wall_furni = callback
+
+    def request(self):
+        self.floor_furni = []
+        self.wall_furni = []
+        self.__ext.send_to_server(HPacket(self.__request_id))
