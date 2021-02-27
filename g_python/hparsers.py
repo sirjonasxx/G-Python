@@ -1,6 +1,12 @@
 from enum import Enum
 
 
+class HGroupMode(Enum):
+    OPEN: 0
+    ADMINAPPROVAL: 1
+    CLOSED: 2
+
+        
 class HBubble(Enum):
     NORMAL: 0
     RED: 3
