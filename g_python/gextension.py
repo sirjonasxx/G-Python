@@ -4,7 +4,7 @@ from enum import Enum
 from .hpacket import HPacket
 from .hmessage import HMessage, Direction
 import json
-
+from time import sleep
 
 class INCOMING_MESSAGES(Enum):
     ON_DOUBLE_CLICK = 1
@@ -383,6 +383,13 @@ class Extension:
         if id not in self.__intercept_listeners[direction]:
             self.__intercept_listeners[direction][id] = []
         self.__intercept_listeners[direction][id].append(callback)
+
+    def IsUnity(self):
+        sleep(0.20)
+        if self.connection_info["host"] == "":
+            return True
+        else:
+            return False
 
     def start(self):
         """
