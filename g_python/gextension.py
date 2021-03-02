@@ -199,8 +199,9 @@ class Extension:
                 port = packet.read_int()
                 hotel_version = packet.read_string()
                 harble_messages_path = packet.read_string()
+                client_type = packet.read_string()
                 self.connection_info = {'host': host, 'port': port, 'hotel_version': hotel_version,
-                                        'harble_messages_path': harble_messages_path}
+                                        'client_type': client_type, 'harble_messages_path': harble_messages_path}
 
                 if harble_messages_path != '' and harble_messages_path != 'null':
                     self.__harble_api_init()
