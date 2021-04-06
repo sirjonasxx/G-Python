@@ -2,6 +2,22 @@ from .gextension import Extension
 from .hmessage import HMessage, Direction
 from .hpacket import HPacket
 from .hparsers import HEntity, HFloorItem, HWallItem, HInventoryItem
+import sys
+
+
+def validate_headers(ext: Extension, parser_name, headers):
+    for (header, dir) in headers:
+        if header is None:
+            error = "Missing headerID/Name in '{}'".format(parser_name)
+            sys.stderr.write(error)
+            ext.write_to_console(error, "red")
+            return False
+        if isinstance(header, str) and (ext.harble_api is None or header not in ext.harble_api[dir]):
+            error = "Invalid headerID/Name in '{}'".format(parser_name)
+            sys.stderr.write(error)
+            ext.write_to_console(error, "red")
+            return False
+    return True
 
 
 class RoomUsers:
@@ -12,6 +28,13 @@ class RoomUsers:
 
         self.__ext = ext
         self.__request_id = request
+
+        if not validate_headers(ext, 'RoomUsers', [
+            (room_users, Direction.TO_CLIENT),
+            (room_model, Direction.TO_CLIENT),
+            (remove_user, Direction.TO_CLIENT),
+            (request, Direction.TO_SERVER)]):
+            return
 
         ext.intercept(Direction.TO_CLIENT, self.__load_room_users, room_users)
         ext.intercept(Direction.TO_CLIENT, self.__clear_room_users, room_model)  # (clear users / new room entered)
@@ -53,6 +76,12 @@ class RoomFurni:
         self.__ext = ext
         self.__request_id = request
 
+        if not validate_headers(ext, 'RoomFurni', [
+            (floor_items, Direction.TO_CLIENT),
+            (wall_items, Direction.TO_CLIENT),
+            (request, Direction.TO_SERVER)]):
+            return
+
         ext.intercept(Direction.TO_CLIENT, self.__floor_furni_load, floor_items)
         ext.intercept(Direction.TO_CLIENT, self.__wall_furni_load, wall_items)
 
@@ -88,6 +117,12 @@ class Inventory:
         self.__ext = ext
         self.__request_id = request
         self.__inventory_load_callback = None
+
+        if not validate_headers(ext, 'Inventory', [
+            (inventory_items, Direction.TO_CLIENT),
+            (request, Direction.TO_SERVER)]):
+            return
+
         ext.intercept(Direction.TO_CLIENT, self.__user_inventory_load, inventory_items)
 
     def __user_inventory_load(self, message: HMessage):
