@@ -258,7 +258,7 @@ class Extension:
                 def generate_harble_dict(json_list):
                     dict = {}
                     for elem in json_list:
-                        dict[elem['Id']] = elem
+                        dict[int(elem['Id'])] = elem
                         dict[elem['Hash']] = elem
                         name = elem['Name']
                         if name is not None and name != '' and name != 'null':
