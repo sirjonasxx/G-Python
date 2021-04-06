@@ -206,16 +206,18 @@ class HGroup:
 
 class HUserProfile:
     def __init__(self, packet):
-        self.id, self.username, self.motto, self.figure, self.creation_date, self.achievement_score, \
+        self.id, self.username, self.figure, self.motto, self.creation_date, self.achievement_score, \
         self.friend_count, self.is_friend, self.is_requested_friend, self.is_online = packet.read('issssiiBBB')
 
         self.groups = [HGroup(packet) for _ in range(packet.read_int())]
         self.last_access_since, self.open_profile = packet.read('iB')
 
+        self.idk1, self.level, self.idk2, self.gems, self.idk3, self.idk4 = packet.read('BiiiBB')
+
     def __str__(self):
-        return "id: {}, username: {}, motto: {}, score: {}, friends: {}, online: {}, groups: {}".format(
-            self.id, self.username, self.motto, self.achievement_score,
-            self.friend_count, self.is_online, len(self.groups))
+        return "id: {}, username: {}, score: {}, friends: {}, online: {}, groups: {}, level: {}, gems: {}".format(
+            self.id, self.username, self.achievement_score,
+            self.friend_count, self.is_online, len(self.groups), self.level, self.gems)
 
 
 class HWallItem:
