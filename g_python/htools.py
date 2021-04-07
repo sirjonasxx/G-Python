@@ -6,35 +6,36 @@ import sys
 
 
 def validate_headers(ext: Extension, parser_name, headers):
-    for (header, dir) in headers:
-        if header is None:
-            error = "Missing headerID/Name in '{}'".format(parser_name)
-            sys.stderr.write(error)
-            ext.write_to_console(error, "red")
-            return False
-        if isinstance(header, str) and (ext.harble_api is None or header not in ext.harble_api[dir]):
-            error = "Invalid headerID/Name in '{}'".format(parser_name)
-            sys.stderr.write(error)
-            ext.write_to_console(error, "red")
-            return False
-    return True
+    def validate():
+        for (header, dir) in headers:
+            if header is None:
+                error = "Missing headerID/Name in '{}'".format(parser_name)
+                print(error, file=sys.stderr)
+                ext.write_to_console(error, "red")
+            if isinstance(header, str) and (ext.harble_api is None or header not in ext.harble_api[dir]):
+                error = "Invalid headerID/Name in '{}': {}".format(parser_name, header)
+                print(error, file=sys.stderr)
+                ext.write_to_console(error, "red")
+
+    ext.on_event('connection_start', validate)
+    if ext.connection_info is not None:
+        validate()
 
 
 class RoomUsers:
-    def __init__(self, ext: Extension, room_users='RoomUsers', room_model='RoomModel', remove_user='RoomUserRemove',
-                 request='RequestRoomHeightmap'):
+    def __init__(self, ext: Extension, room_users='Users', room_model='RoomReady', remove_user='UserRemove',
+                 request='UnknownEngineMessage_0'): # =(
+        validate_headers(ext, 'RoomUsers', [
+            (room_users, Direction.TO_CLIENT),
+            (room_model, Direction.TO_CLIENT),
+            (remove_user, Direction.TO_CLIENT),
+            (request, Direction.TO_SERVER)])
+
         self.room_users = {}
         self.__callback_new_users = None
 
         self.__ext = ext
         self.__request_id = request
-
-        if not validate_headers(ext, 'RoomUsers', [
-            (room_users, Direction.TO_CLIENT),
-            (room_model, Direction.TO_CLIENT),
-            (remove_user, Direction.TO_CLIENT),
-            (request, Direction.TO_SERVER)]):
-            return
 
         ext.intercept(Direction.TO_CLIENT, self.__load_room_users, room_users)
         ext.intercept(Direction.TO_CLIENT, self.__clear_room_users, room_model)  # (clear users / new room entered)
@@ -66,8 +67,13 @@ class RoomUsers:
 
 
 class RoomFurni:
-    def __init__(self, ext: Extension, floor_items='RoomFloorItems', wall_items='RoomWallItems',
-                 request='RequestRoomHeightmap'):
+    def __init__(self, ext: Extension, floor_items='Objects', wall_items='Items',
+                 request='UnknownEngineMessage_0'):
+        validate_headers(ext, 'RoomFurni', [
+            (floor_items, Direction.TO_CLIENT),
+            (wall_items, Direction.TO_CLIENT),
+            (request, Direction.TO_SERVER)])
+
         self.floor_furni = []
         self.wall_furni = []
         self.__callback_floor_furni = None
@@ -75,12 +81,6 @@ class RoomFurni:
 
         self.__ext = ext
         self.__request_id = request
-
-        if not validate_headers(ext, 'RoomFurni', [
-            (floor_items, Direction.TO_CLIENT),
-            (wall_items, Direction.TO_CLIENT),
-            (request, Direction.TO_SERVER)]):
-            return
 
         ext.intercept(Direction.TO_CLIENT, self.__floor_furni_load, floor_items)
         ext.intercept(Direction.TO_CLIENT, self.__wall_furni_load, wall_items)
@@ -108,7 +108,11 @@ class RoomFurni:
 
 
 class Inventory:
-    def __init__(self, ext: Extension, inventory_items='InventoryItems', request='RequestInventoryItems'):
+    def __init__(self, ext: Extension, inventory_items='FurniList', request='RequestFurniInventory'):
+        validate_headers(ext, 'Inventory', [
+            (inventory_items, Direction.TO_CLIENT),
+            (request, Direction.TO_SERVER)])
+
         self.loaded = False
         self.is_loading = False
         self.inventory_items = []
@@ -117,11 +121,6 @@ class Inventory:
         self.__ext = ext
         self.__request_id = request
         self.__inventory_load_callback = None
-
-        if not validate_headers(ext, 'Inventory', [
-            (inventory_items, Direction.TO_CLIENT),
-            (request, Direction.TO_SERVER)]):
-            return
 
         ext.intercept(Direction.TO_CLIENT, self.__user_inventory_load, inventory_items)
 

@@ -200,11 +200,12 @@ class Extension:
                 hotel_version = packet.read_string()
                 harble_messages_path = packet.read_string()
                 client_type = packet.read_string()
-                self.connection_info = {'host': host, 'port': port, 'hotel_version': hotel_version,
-                                        'client_type': client_type, 'harble_messages_path': harble_messages_path}
 
                 if harble_messages_path != '' and harble_messages_path != 'null':
-                    self.__harble_api_init()
+                    self.__harble_api_init(harble_messages_path)
+
+                self.connection_info = {'host': host, 'port': port, 'hotel_version': hotel_version,
+                                        'client_type': client_type, '__harble_messages_path': harble_messages_path}
 
                 self.__raise_event('connection_start')
 
@@ -250,15 +251,15 @@ class Extension:
                 self.__response = HPacket.reconstruct_from_java(packet_string)
                 self.__response_barrier.wait()
 
-    def __harble_api_init(self):
+    def __harble_api_init(self, path):
         try:
-            path = self.connection_info['harble_messages_path']
             with open(path) as f:
 
                 def generate_harble_dict(json_list):
                     dict = {}
                     for elem in json_list:
-                        dict[int(elem['Id'])] = elem
+                        elem['Id'] = int(elem['Id'])
+                        dict[elem['Id']] = elem
                         dict[elem['Hash']] = elem
                         name = elem['Name']
                         if name is not None and name != '' and name != 'null':
