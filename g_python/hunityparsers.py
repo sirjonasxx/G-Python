@@ -9,6 +9,9 @@ class HUnityEntity:
         self.id, self.name, self.motto, self.figure_id, self.index, x, y, z, _, entity_type_id = \
             packet.read('lsssiiisii')
         self.tile = get_tile_from_coords(x, y, z)
+        self.nextTile = None
+        self.headFacing = None
+        self.bodyFacing = None
         self.entity_type = HEntityType(entity_type_id)
 
         self.stuff = []
@@ -30,17 +33,26 @@ class HUnityEntity:
     def __str__(self):
         return '<HUnityEntity> [{}] {} - {}'.format(self.index, self.name, self.entity_type.name)
 
+    def try_update(self, update):
+        self.tile = update.tile
+        self.nextTile = update.nextTile
+        self.headFacing = update.headFacing
+        self.bodyFacing = update.bodyFacing
+
+
     @classmethod
     def parse(cls, packet):
         return [HUnityEntity(packet) for _ in range(packet.read_short())]
 
 
+
+
 class HUnityStatus:
     def __init__(self, packet):
-        self.index, x, y, z, dir1, dir2, self.action = packet.read('iiisiis')
+        self.index, x, y, z, head, body, self.action = packet.read('iiisiis')
         self.tile = get_tile_from_coords(x, y, z)
-        self.headFacing = HDirection(dir1)
-        self.bodyFacing = HDirection(dir2)
+        self.headFacing = HDirection(head)
+        self.bodyFacing = HDirection(body)
         self.nextTile = self.predict_next_tile()
 
     def __str__(self):

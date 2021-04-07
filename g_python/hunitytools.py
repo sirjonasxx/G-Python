@@ -1,5 +1,4 @@
 import threading
-import time
 
 from .gextension import Extension
 from .hmessage import HMessage, Direction
@@ -8,7 +7,7 @@ from .hunityparsers import HUnityEntity, HFUnityFloorItem
 
 
 class UnityRoomUsers:
-    def __init__(self, ext: Extension, users_in_room=28, get_guest_room=385, user_logged_out=29):
+    def __init__(self, ext: Extension, users_in_room=28, get_guest_room=385, user_logged_out=29, status=34):
         self.room_users = {}
         self.__callback_new_users = None
 
@@ -19,6 +18,7 @@ class UnityRoomUsers:
         ext.intercept(Direction.TO_CLIENT, self.__load_room_users, users_in_room)
         ext.intercept(Direction.TO_SERVER, self.__clear_room_users, get_guest_room)
         ext.intercept(Direction.TO_CLIENT, self.__remove_user, user_logged_out)
+        ext.intercept(Direction.TO_CLIENT, self.__on_status, status)
 
     def __remove_user(self, message: HMessage):
         self.__start_remove_user_processing_thread(message.packet.read_int())
@@ -46,6 +46,7 @@ class UnityRoomUsers:
         self.__lock.acquire()
         try:
             for user in entities:
+                print(f'Adding entity {user}')
                 self.room_users[user.index] = user
         finally:
             self.__lock.release()
@@ -61,6 +62,32 @@ class UnityRoomUsers:
 
     def on_new_users(self, func):
         self.__callback_new_users = func
+
+    def __on_status(self, message):
+        thread = threading.Thread(target=self.__parse_and_apply_updates, args=(message.packet,))
+        thread.start()
+
+    def __parse_and_apply_updates(self, packet):
+        self.try_updates(HUnityStatus.parse(packet))
+
+    def __apply_updates(self, updates):
+        for update in updates:
+            self.__lock.acquire()
+            try:
+                user = self.room_users[update.index]
+                if isinstance(user, HUnityEntity):
+                    user.try_update(update)
+            except KeyError:
+                pass
+            finally:
+                self.__lock.release()
+
+    def __start_update_processing_thread(self, updates):
+        thread = threading.Thread(target=self.__apply_updates, args=(updates,))
+        thread.start()
+
+    def try_updates(self, updates):
+        self.__start_update_processing_thread(updates)
 
 
 class UnityRoomFurni:
