@@ -12,7 +12,7 @@ def validate_headers(ext: Extension, parser_name, headers):
                 error = "Missing headerID/Name in '{}'".format(parser_name)
                 print(error, file=sys.stderr)
                 ext.write_to_console(error, "red")
-            if isinstance(header, str) and (ext.harble_api is None or header not in ext.harble_api[dir]):
+            if isinstance(header, str) and (ext.packet_infos is None or header not in ext.packet_infos[dir]):
                 error = "Invalid headerID/Name in '{}': {}".format(parser_name, header)
                 print(error, file=sys.stderr)
                 ext.write_to_console(error, "red")
@@ -24,7 +24,7 @@ def validate_headers(ext: Extension, parser_name, headers):
 
 class RoomUsers:
     def __init__(self, ext: Extension, room_users='Users', room_model='RoomReady', remove_user='UserRemove',
-                 request='UnknownEngineMessage_0'): # =(
+                 request='GetHeightMap'):
         validate_headers(ext, 'RoomUsers', [
             (room_users, Direction.TO_CLIENT),
             (room_model, Direction.TO_CLIENT),
@@ -68,7 +68,7 @@ class RoomUsers:
 
 class RoomFurni:
     def __init__(self, ext: Extension, floor_items='Objects', wall_items='Items',
-                 request='UnknownEngineMessage_0'):
+                 request='GetHeightMap'):
         validate_headers(ext, 'RoomFurni', [
             (floor_items, Direction.TO_CLIENT),
             (wall_items, Direction.TO_CLIENT),

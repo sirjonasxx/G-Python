@@ -5,11 +5,11 @@ class HPacket:
     default_extension = None
 
     def __init__(self, id, *objects):
-        self.harble_id = None if (type(id) is int) else id
+        self.incomplete_identifier = None if (type(id) is int) else id
 
         self.read_index = 6
         self.bytearray = bytearray(b'\x00\x00\x00\x02\xff\xff')
-        if self.harble_id is None:
+        if self.incomplete_identifier is None:
             self.replace_short(4, id)
         self.is_edited = False
 
@@ -26,17 +26,17 @@ class HPacket:
         self.is_edited = False
 
     def fill_id(self, direction: Direction, extension=None) -> bool:
-        if self.harble_id is not None:
+        if self.incomplete_identifier is not None:
             if extension is None:
                 if self.default_extension is None:
                     return False
                 extension = self.default_extension
 
-            if extension.harble_api is not None and self.harble_id in extension.harble_api[direction]:
+            if extension.packet_infos is not None and self.incomplete_identifier in extension.packet_infos[direction]:
                 edited_old = self.is_edited
-                self.replace_short(4, extension.harble_api[direction][self.harble_id]['Id'])
+                self.replace_short(4, extension.packet_infos[direction][self.incomplete_identifier][0]['Id'])
                 self.is_edited = edited_old
-                self.harble_id = None
+                self.incomplete_identifier = None
                 return True
             return False
         return True
@@ -68,7 +68,7 @@ class HPacket:
 
         obj.bytearray = bytearray(string[1:].encode("iso-8859-1"))
         obj.is_edited = string[0] == '1'
-        obj.harble_id = None
+        obj.incomplete_identifier = None
         return obj
 
     def __repr__(self):
@@ -81,11 +81,11 @@ class HPacket:
         return self.read_int(0)
 
     def __str__(self):
-        return "(id:{}, length:{}) -> {}".format(self.header_id() if not self.is_harble_api_packet() else self.harble_id,
+        return "(id:{}, length:{}) -> {}".format(self.header_id() if not self.is_incomplete_packet() else self.incomplete_identifier,
                                                  len(self), bytes(self))
 
-    def is_harble_api_packet(self) -> bool:
-        return self.harble_id is not None
+    def is_incomplete_packet(self) -> bool:
+        return self.incomplete_identifier is not None
 
     def g_string(self, extension=None) -> str:
         if extension is None:

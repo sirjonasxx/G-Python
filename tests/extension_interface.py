@@ -20,7 +20,7 @@ ext = Extension(extension_info, sys.argv, extension_settings)
 
 def on_connection_start():
     print('Connected with: {}:{}'.format(ext.connection_info['host'], ext.connection_info['port']))
-    print(ext.harble_api)
+    print(ext.packet_infos)
 
 
 ext.on_event('double_click', lambda: print('Extension has been clicked'))

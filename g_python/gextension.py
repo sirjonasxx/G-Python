@@ -86,7 +86,7 @@ class Extension:
         self._extension_settings = extension_settings
 
         self.connection_info = None
-        self.harble_api = None
+        self.packet_infos = None
 
         self.__start_barrier = threading.Barrier(2)
         self.__start_lock = threading.Lock()
@@ -148,15 +148,16 @@ class Extension:
                 habbo_packet.reset()
 
             header_id = habbo_packet.header_id()
-            hash, name = None, None
-            if self.harble_api is not None and header_id in self.harble_api[habbo_message.direction]:
-                hash = self.harble_api[habbo_message.direction][header_id]['Hash']
-                name = self.harble_api[habbo_message.direction][header_id]['Name']
-                if name == '' or name == 'null':
-                    name = None
+            potential_intercept_ids = {header_id}
+            if self.packet_infos is not None and header_id in self.packet_infos[habbo_message.direction]:
+                for elem in self.packet_infos[habbo_message.direction][header_id]:
+                    if elem['Name'] is not None:
+                        potential_intercept_ids.add(elem['Name'])
+                    if elem['Hash'] is not None:
+                        potential_intercept_ids.add(elem['Hash'])
 
-            for id in [header_id, hash, name]:
-                if id is not None and id in self.__intercept_listeners[habbo_message.direction]:
+            for id in potential_intercept_ids:
+                if id in self.__intercept_listeners[habbo_message.direction]:
                     for func in self.__intercept_listeners[habbo_message.direction][id]:
                         func(habbo_message)
                         habbo_packet.reset()
@@ -195,24 +196,18 @@ class Extension:
                 self.__send_to_stream(response)
 
             elif message_type == INCOMING_MESSAGES.CONNECTION_START:
-                host = packet.read_string()
-                port = packet.read_int()
-                hotel_version = packet.read_string()
-                harble_messages_path = packet.read_string()
-                client_type = packet.read_string()
-
-                if harble_messages_path != '' and harble_messages_path != 'null':
-                    self.__harble_api_init(harble_messages_path)
+                host, port, hotel_version, client_identifier, client_type = packet.read("sisss")
+                self.__parse_packet_infos(packet)
 
                 self.connection_info = {'host': host, 'port': port, 'hotel_version': hotel_version,
-                                        'client_type': client_type, '__harble_messages_path': harble_messages_path}
+                                        'client_identifier': client_identifier, 'client_type': client_type}
 
                 self.__raise_event('connection_start')
 
             elif message_type == INCOMING_MESSAGES.CONNECTION_END:
                 self.__raise_event('connection_end')
                 self.connection_info = None
-                self.harble_api = None
+                self.packet_infos = None
 
             elif message_type == INCOMING_MESSAGES.FLAGS_CHECK:
                 size = packet.read_int()
@@ -251,31 +246,36 @@ class Extension:
                 self.__response = HPacket.reconstruct_from_java(packet_string)
                 self.__response_barrier.wait()
 
-    def __harble_api_init(self, path):
-        try:
-            with open(path) as f:
+    def __parse_packet_infos(self, packet : HPacket):
+        incoming = {}
+        outgoing = {}
 
-                def generate_harble_dict(json_list):
-                    dict = {}
-                    for elem in json_list:
-                        elem['Id'] = int(elem['Id'])
-                        dict[elem['Id']] = elem
-                        dict[elem['Hash']] = elem
-                        name = elem['Name']
-                        if name is not None and name != '' and name != 'null':
-                            dict[name] = elem
-                    return dict
+        length = packet.read_int()
+        for _ in range(length):
+            headerId, hash, name, structure, isOutgoing, source = packet.read('isssBs')
+            name = name if name is not 'NULL' else None
+            hash = hash if hash is not 'NULL' else None
+            structure = structure if structure is not 'NULL' else None
 
-                harble_api_json = json.load(f)
-                incoming_json = harble_api_json['Incoming']
-                outgoing_json = harble_api_json['Outgoing']
-                incoming = generate_harble_dict(incoming_json)
-                outgoing = generate_harble_dict(outgoing_json)
+            elem = {'Id': headerId, 'Name': name, 'Hash': hash, 'Structure': structure, 'Source': source}
 
-                self.harble_api = {Direction.TO_CLIENT: incoming, Direction.TO_SERVER: outgoing}
-        except:
-            self.harble_api = None
-            self.write_to_console('Failed parsing HarbleAPI', 'red')
+            packet_dict = outgoing if isOutgoing else incoming
+            if headerId not in packet_dict:
+                packet_dict[headerId] = []
+            packet_dict[headerId].append(elem)
+
+            if hash is not None:
+                if hash not in packet_dict:
+                    packet_dict[hash] = []
+                packet_dict[hash].append(elem)
+
+            if name is not None:
+                if name not in packet_dict:
+                    packet_dict[name] = []
+                packet_dict[name].append(elem)
+
+        self.packet_infos = {Direction.TO_CLIENT: incoming, Direction.TO_SERVER: outgoing}
+
 
     def __send_to_stream(self, packet):
         self.__stream_lock.acquire()
@@ -291,13 +291,13 @@ class Extension:
         if not self.is_closed():
 
             old_settings = None
-            if packet.is_harble_api_packet():
-                old_settings = (packet.header_id(), packet.is_edited, packet.harble_id)
+            if packet.is_incomplete_packet():
+                old_settings = (packet.header_id(), packet.is_edited, packet.incomplete_identifier)
                 packet.fill_id(direction, self)
 
-            if packet.is_corrupted():
+            if packet.is_corrupted() or packet.is_incomplete_packet():
                 self.__lost_packets += 1
-                print('Could not send corrupted packet')
+                print('Could not send corrupted or incomplete packet')
                 return False
 
             wrapper_packet = HPacket(OUTGOING_MESSAGES.SEND_MESSAGE.value, direction == Direction.TO_SERVER,
@@ -306,7 +306,7 @@ class Extension:
 
             if old_settings is not None:
                 packet.replace_short(4, old_settings[0])
-                packet.harble_id = old_settings[2]
+                packet.incomplete_identifier = old_settings[2]
                 packet.is_edited = old_settings[1]
 
             return True

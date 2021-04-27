@@ -1,4 +1,5 @@
 import sys
+import time
 
 from g_python.gextension import Extension
 from g_python.htools import RoomFurni, RoomUsers
@@ -26,3 +27,6 @@ room_users.on_new_users(lambda users: print(list(map(str, users))))
 # room_users.room_users         (list of HEntitity)
 
 # you can also request the users/furniture with the .request() method
+
+time.sleep(0.5)
+room_furni.request()
