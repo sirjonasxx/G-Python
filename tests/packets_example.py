@@ -12,15 +12,9 @@ extension_info = {
     "author": "sirjonasxx"
 }
 
-ext = Extension(extension_info, sys.argv, {"use_click_trigger": True})
-
-def on_click():
-    ext.send_to_server("{out:MoveAvatar}{i:5}{i:17}")
-
-
-ext.on_event('double_click', on_click)
+ext = Extension(extension_info, sys.argv)
 ext.start()
-
+ext.send_to_server(HPacket("Chat", "hi", 1, 1))
 
 def on_walk(message):
     # packet = message.packet

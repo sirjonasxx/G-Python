@@ -204,6 +204,10 @@ class Extension:
 
                 self.__raise_event('connection_start')
 
+                if self.__await_connect_packet:
+                    self.__await_connect_packet = False
+                    self.__start_barrier.wait()
+
             elif message_type == INCOMING_MESSAGES.CONNECTION_END:
                 self.__raise_event('connection_end')
                 self.connection_info = None
@@ -222,7 +226,10 @@ class Extension:
                     'green',
                     False
                 )
-                self.__start_barrier.wait()
+
+                self.__await_connect_packet = packet.read_bool()
+                if not self.__await_connect_packet:
+                    self.__start_barrier.wait()
 
             elif message_type == INCOMING_MESSAGES.ON_DOUBLE_CLICK:
                 self.__raise_event('double_click')
