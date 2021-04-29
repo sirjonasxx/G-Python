@@ -1,9 +1,12 @@
 import socket
+import sys
 import threading
 from enum import Enum
 from .hpacket import HPacket
 from .hmessage import HMessage, Direction
 import json
+
+MINIMUM_GEARTH_VERSION = "1.4.1"
 
 
 class INCOMING_MESSAGES(Enum):
@@ -62,7 +65,10 @@ def get_argument(args, flags):
 
 
 class Extension:
-    def __init__(self, extension_info, args, extension_settings=None):
+    def __init__(self, extension_info, args, extension_settings=None, silent=False):
+        if not silent:
+            print("WARNING: This version of G-Python requires G-Earth >= {}".format(MINIMUM_GEARTH_VERSION), file=sys.stderr)
+
         extension_settings = fill_settings(extension_settings, EXTENSION_SETTINGS_DEFAULT)
 
         if get_argument(args, PORT_FLAG) is None:
@@ -306,9 +312,19 @@ class Extension:
                 old_settings = (packet.header_id(), packet.is_edited, packet.incomplete_identifier)
                 packet.fill_id(direction, self)
 
-            if packet.is_corrupted() or packet.is_incomplete_packet():
+            if self.connection_info == None:
                 self.__lost_packets += 1
-                print('Could not send corrupted or incomplete packet')
+                print("Could not send packet because G-Earth isn't connected to a client", file=sys.stderr)
+                return False
+
+            if packet.is_corrupted():
+                self.__lost_packets += 1
+                print('Could not send corrupted', file=sys.stderr)
+                return False
+
+            if packet.is_incomplete_packet():
+                self.__lost_packets += 1
+                print('Could not send incomplete packet', file=sys.stderr)
                 return False
 
             wrapper_packet = HPacket(OUTGOING_MESSAGES.SEND_MESSAGE.value, direction == Direction.TO_SERVER,
