@@ -282,10 +282,14 @@ class Extension:
         self.__sock.send(packet.bytearray)
         self.__stream_lock.release()
 
+    def __callbacks(self, callbacks):
+        for func in callbacks:
+            func()
+
     def __raise_event(self, event_name):
         if event_name in self.__events:
-            for func in self.__events[event_name]:
-                func()
+            t = threading.Thread(target=self.__callbacks, args=(self.__events[event_name],))
+            t.start()
 
     def __send(self, direction, packet: HPacket):
         if not self.is_closed():
