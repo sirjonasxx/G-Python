@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="g-python",
-    version="0.1.4",
+    version="0.1.5",
     author="sirjonasxx",
     author_email="sirjonasxx@hotmail.com",
     description="G-Earth extension interface for Python.",
