@@ -47,10 +47,10 @@ class RoomUsers:
     def __remove_user(self, message: HMessage):
         index = int(message.packet.read_string())
         if index in self.room_users:
-            if self.__callback_remove_user is not None:
-                self.__callback_remove_user(self.room_users[index])
-            
+            user = self.room_users[index]
             del self.room_users[index]
+            if self.__callback_remove_user is not None:
+                self.__callback_remove_user(user)
 
     def __load_room_users(self, message: HMessage):
         users = HEntity.parse(message.packet)
