@@ -3,7 +3,6 @@ from .hmessage import HMessage, Direction
 from .hpacket import HPacket
 from .hparsers import HEntity, HFloorItem, HWallItem, HInventoryItem, HUserUpdate
 import sys
-import threading
 
 
 def validate_headers(ext: Extension, parser_name, headers):
@@ -38,8 +37,6 @@ class RoomUsers:
 
         self.__ext = ext
         self.__request_id = request
-        self.__lock = threading.Lock()
-        self.lock = self.__lock
 
         ext.intercept(Direction.TO_CLIENT, self.__load_room_users, room_users)
         ext.intercept(Direction.TO_CLIENT, self.__clear_room_users, room_model)  # (clear users / new room entered)
@@ -48,40 +45,20 @@ class RoomUsers:
 
 
     def __remove_user(self, message: HMessage):
-        self.__start_remove_user_processing_thread(int(message.packet.read_string()))
-
-    def __start_remove_user_processing_thread(self, index: int):
-        thread = threading.Thread(target=self.__process_remove_user, args=(index,))
-        thread.start()
-
-    def __process_remove_user(self, index: int):
-        self.__lock.acquire()
-        try:
-            if index in self.room_users:
-                if self.__callback_remove_user is not None:
-                    self.__callback_remove_user(self.room_users[index])
-                del self.room_users[index]
-        finally:
-            self.__lock.release()
+        index = int(message.packet.read_string())
+        if index in self.room_users:
+            if self.__callback_remove_user is not None:
+                self.__callback_remove_user(self.room_users[index])
+            
+            del self.room_users[index]
 
     def __load_room_users(self, message: HMessage):
         users = HEntity.parse(message.packet)
-        self.__start_user_processing_thread(users)
+        for user in entities:
+            self.room_users[user.index] = user
 
         if self.__callback_new_users is not None:
             self.__callback_new_users(users)
-
-    def __start_user_processing_thread(self, entities):
-        thread = threading.Thread(target=self.__process_users_in_room, args=(entities,))
-        thread.start()
-
-    def __process_users_in_room(self, entities):
-        self.__lock.acquire()
-        try:
-            for user in entities:
-                self.room_users[user.index] = user
-        finally:
-            self.__lock.release()
 
     def __clear_room_users(self, _):
         self.room_users.clear()
@@ -93,30 +70,16 @@ class RoomUsers:
         self.__callback_remove_user = func
 
     def __on_status(self, message):
-        thread = threading.Thread(target=self.__parse_and_apply_updates, args=(message.packet,))
-        thread.start()
-
-    def __parse_and_apply_updates(self, packet):
         self.try_updates(HUserUpdate.parse(packet))
 
-    def __apply_updates(self, updates):
+    def try_updates(self, updates):
         for update in updates:
-            self.__lock.acquire()
             try:
                 user = self.room_users[update.index]
                 if isinstance(user, HEntity):
                     user.try_update(update)
             except KeyError:
                 pass
-            finally:
-                self.__lock.release()
-
-    def __start_update_processing_thread(self, updates):
-        thread = threading.Thread(target=self.__apply_updates, args=(updates,))
-        thread.start()
-
-    def try_updates(self, updates):
-        self.__start_update_processing_thread(updates)
 
     def request(self):
         self.room_users = {}
