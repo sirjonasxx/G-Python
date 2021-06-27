@@ -54,7 +54,7 @@ class RoomUsers:
 
     def __load_room_users(self, message: HMessage):
         users = HEntity.parse(message.packet)
-        for user in entities:
+        for user in users:
             self.room_users[user.index] = user
 
         if self.__callback_new_users is not None:
