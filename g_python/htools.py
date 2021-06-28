@@ -70,7 +70,7 @@ class RoomUsers:
         self.__callback_remove_user = func
 
     def __on_status(self, message):
-        self.try_updates(HUserUpdate.parse(packet))
+        self.try_updates(HUserUpdate.parse(message.packet))
 
     def try_updates(self, updates):
         for update in updates:
