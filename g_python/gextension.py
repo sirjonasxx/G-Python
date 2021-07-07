@@ -413,6 +413,20 @@ class Extension:
             self.__intercept_listeners[direction][id] = []
         self.__intercept_listeners[direction][id].append(callback)
 
+    def remove_intercept(self, id=-1):
+        """
+        Clear intercepts per id or all of them when none is given
+        """
+
+        if id == -1:
+            for direction in self.__intercept_listeners:
+                for identifier in self.__intercept_listeners[direction]:
+                    del self.__intercept_listeners[direction][identifier]
+        else:
+            for direction in self.__intercept_listeners:
+                if id in self.__intercept_listeners[direction]:
+                    del self.__intercept_listeners[direction][id]        
+
     def start(self):
         """
         Tries to set up a connection with G-Earth
