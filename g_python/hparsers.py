@@ -141,17 +141,17 @@ class HEntity:
         return [HEntity(packet) for _ in range(packet.read_int())]
 
 
-class HFriend:
+class HFriends:
     def __init__(self, packet):
-        self.friend_list = []
+        self.friends = []
         _, _ = packet.read('ii')
-        self.count_friend = packet.read_int()
-        for i in range(self.count_friend):
+        self.total_friends = packet.read_int()
+        for _ in range(self.total_friends):
             id_user, name, _, _, _, clothes, _, motto = packet.read('isiBBsis')
             if packet.read_int() == 0:
                 _, _ = packet.read('BB')
             _, _ = packet.read('Bs')
-            self.friend_list.append([id_user, name, clothes, motto])
+            self.friends.append([id_user, name, clothes, motto])
 
 
 def read_stuff(packet, category):
