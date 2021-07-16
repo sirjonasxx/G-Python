@@ -141,6 +141,19 @@ class HEntity:
         return [HEntity(packet) for _ in range(packet.read_int())]
 
 
+class HFriends:
+    def __init__(self, packet):
+        self.friends = []
+        _, _ = packet.read('ii')
+        self.total_friends = packet.read_int()
+        for _ in range(self.total_friends):
+            id_user, name, _, _, _, clothes, _, motto = packet.read('isiBBsis')
+            if packet.read_int() == 0:
+                _, _ = packet.read('BB')
+            _, _ = packet.read('Bs')
+            self.friends.append([id_user, name, clothes, motto])
+
+
 def read_stuff(packet, category):
     stuff = []
     cat2 = category & 0xFF
