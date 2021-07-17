@@ -1,7 +1,7 @@
 import sys
 
 from g_python.gextension import Extension
-from g_python_bot import Bot
+from g_python_bot import ChatBot
 
 extension_info = {
     "title": "ConsoleBot",
@@ -23,7 +23,7 @@ def ping():
 
 
 # Creates the object
-console_bot = Bot(ext, botname="ConsoleBot-Example")
+console_bot = ChatBot(ext, botname="ConsoleBot-Example")
 # Defines the command and the call functions
 console_bot.on_command(':ping', pong)
 console_bot.on_command(':pong', ping)

@@ -4,7 +4,7 @@ from g_python.hpacket import HPacket
 from g_python.gextension import Extension
 
 
-class Bot:
+class ChatBot:
     def __init__(self, extension: Extension, bot_id=99999999, botname="ConsoleBot", figurestring="hd-3704-29"):
         self.__ext = extension
         self.bot_id = bot_id
