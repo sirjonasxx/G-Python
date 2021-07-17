@@ -237,8 +237,7 @@ class HWallItem:
             furni.owner = owners[furni.owner_id]
 
         return furnis
-
-
+        
 class HInventoryItem:
     def __init__(self, packet):
         _, test = packet.read('is')
@@ -258,3 +257,22 @@ class HInventoryItem:
     def parse(cls, packet):
         total, current = packet.read('ii')
         return [HInventoryItem(packet) for _ in range(packet.read_int())]
+
+class HRoomMap:
+    def __init__(self, packet):
+        bullshit, bullshit = packet.read("iB")
+
+        map = packet.read_string().split("\r")
+
+        self.tiles = [
+            HPoint(x, y)
+            for x in range(len(map))
+            for y in range(len(map[x]))
+            if map[x][y] != "x"
+        ]
+
+    def is_walkable(self, x, y):
+        for tile in self.tiles:
+            if (tile.x, tile.y) == (x, y):
+                return True
+        return False        
