@@ -1,7 +1,7 @@
 from .gextension import Extension
 from .hmessage import HMessage, Direction
 from .hpacket import HPacket
-from .hparsers import HEntity, HFloorItem, HWallItem, HInventoryItem
+from .hparsers import HEntity, HFloorItem, HWallItem, HInventoryItem, HUserUpdate
 import sys
 
 
@@ -24,7 +24,7 @@ def validate_headers(ext: Extension, parser_name, headers):
 
 class RoomUsers:
     def __init__(self, ext: Extension, room_users='Users', room_model='RoomReady', remove_user='UserRemove',
-                 request='GetHeightMap'):
+                 request='GetHeightMap', status='UserUpdate'):
         validate_headers(ext, 'RoomUsers', [
             (room_users, Direction.TO_CLIENT),
             (room_model, Direction.TO_CLIENT),
@@ -33,6 +33,7 @@ class RoomUsers:
 
         self.room_users = {}
         self.__callback_new_users = None
+        self.__callback_remove_user = None
 
         self.__ext = ext
         self.__request_id = request
@@ -40,12 +41,16 @@ class RoomUsers:
         ext.intercept(Direction.TO_CLIENT, self.__load_room_users, room_users)
         ext.intercept(Direction.TO_CLIENT, self.__clear_room_users, room_model)  # (clear users / new room entered)
         ext.intercept(Direction.TO_CLIENT, self.__remove_user, remove_user)
+        ext.intercept(Direction.TO_CLIENT, self.__on_status, status)
+
 
     def __remove_user(self, message: HMessage):
-        user = message.packet.read_string()
-        index = int(user)
+        index = int(message.packet.read_string())
         if index in self.room_users:
+            user = self.room_users[index]
             del self.room_users[index]
+            if self.__callback_remove_user is not None:
+                self.__callback_remove_user(user)
 
     def __load_room_users(self, message: HMessage):
         users = HEntity.parse(message.packet)
@@ -60,6 +65,21 @@ class RoomUsers:
 
     def on_new_users(self, func):
         self.__callback_new_users = func
+
+    def on_remove_user(self, func):
+        self.__callback_remove_user = func
+
+    def __on_status(self, message):
+        self.try_updates(HUserUpdate.parse(message.packet))
+
+    def try_updates(self, updates):
+        for update in updates:
+            try:
+                user = self.room_users[update.index]
+                if isinstance(user, HEntity):
+                    user.try_update(update)
+            except KeyError:
+                pass
 
     def request(self):
         self.room_users = {}
