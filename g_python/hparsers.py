@@ -271,6 +271,8 @@ class HRoomMap:
             if map[x][y] != "x"
         ]
 
+        self.total_tiles = len(self.tiles)
+
     def is_walkable(self, x, y):
         for tile in self.tiles:
             if (tile.x, tile.y) == (x, y):
