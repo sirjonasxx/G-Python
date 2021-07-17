@@ -17,8 +17,10 @@ ext.start()
 def pong():
     console_bot.send_message("pong")
 
+
 def ping():
     console_bot.send_message("ping")
+
 
 # Creates the object
 console_bot = Bot(ext, botname="ConsoleBot-Example")

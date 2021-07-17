@@ -29,7 +29,6 @@ class Bot:
                     command_callback = threading.Thread(target=callback, args=received_message[len(command):])
                     command_callback.start()
 
-
     def send_message(self, args):
         self.__ext.send_to_client(HPacket('NewConsole', self.bot_id, args, 0, str()))
 
