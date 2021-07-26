@@ -290,6 +290,26 @@ class HWallItem:
         return furnis
 
 
+class HWallUpdate:
+    '''
+        def update(p):
+            wall = HWallUpdate(p.packet)
+            print(wall.widthX, wall.widthY, wall.lengthX, wall.lengthY)
+            # id / cord / rotation / widthX / widthY / lengthX / lengthY
+
+        ext.intercept(Direction.TO_SERVER, update, 'MoveWallItem')
+    '''
+    def __init__(self, packet):
+        self.id, self.cord = packet.read('is')
+
+        self.cord = self.cord.split()
+        self.rotation = self.cord[2]
+        self.widthX, self.widthY = self.cord[0].split(',')
+        self.widthX = self.widthX.split('=')[1]
+        self.lengthX, self.lengthY = self.cord[1].split(',')
+        self.lengthX = self.lengthX.split('=')[1]
+
+
 class HInventoryItem:
     def __init__(self, packet):
         _, test = packet.read('is')
