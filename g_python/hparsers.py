@@ -1,5 +1,5 @@
 from enum import Enum
-
+from g_python.hpacket import HPacket
 
 class HGroupMode(Enum):
     OPEN: 0
@@ -115,7 +115,7 @@ class HPoint:
 
 
 class HEntity:
-    def __init__(self, packet):
+    def __init__(self, packet: HPacket):
         self.id, self.name, self.motto, self.figure_id, self.index, x, y, z, _, entity_type_id = \
             packet.read('isssiiisii')
         self.tile = HPoint(x, y, float(z))
@@ -135,6 +135,12 @@ class HEntity:
 
     def __str__(self):
         return '{}: {} - {}'.format(self.index, self.name, self.entity_type.name)
+
+    def try_update(self, update):
+        self.tile = update.tile
+        self.nextTile = update.nextTile
+        self.headFacing = update.headFacing
+        self.bodyFacing = update.bodyFacing
 
     @classmethod
     def parse(cls, packet):
@@ -180,6 +186,38 @@ def read_stuff(packet, category):
 
     return stuff
 
+
+class HUserUpdate:
+    def __init__(self, packet: HPacket):
+        self.index, x, y, z, head, body, self.action = packet.read('iiisiis')
+        self.tile = get_tile_from_coords(x, y, z)
+        self.headFacing = HDirection(head)
+        self.bodyFacing = HDirection(body)
+        self.nextTile = self.predict_next_tile()
+
+    def __str__(self):
+        return '<HUserUpdate> [{}] - X: {} - Y: {} - Z: {} - head {} - body {} - next tile {}'\
+            .format(self.index, self.tile.x, self.tile.y, self.tile.z, self.headFacing.name, self.bodyFacing.name, self.nextTile)
+
+    def predict_next_tile(self):
+        actions = self.action.split('/mv ')
+        if len(actions) > 1:
+            (x, y, z) = actions[1].replace('/', '').split(',')
+            return get_tile_from_coords(int(x), int(y), z)
+        else:
+            return HPoint(-1, -1, 0.0)
+
+    @classmethod
+    def parse(cls, packet):
+        return [HUserUpdate(packet) for _ in range(packet.read_int())]
+
+def get_tile_from_coords(x, y, z) -> HPoint:
+    try:
+        z = float(z)
+    except ValueError:
+        z = 0.0
+
+    return HPoint(x, y, z)
 
 class HFloorItem:
     def __init__(self, packet):
@@ -250,6 +288,26 @@ class HWallItem:
             furni.owner = owners[furni.owner_id]
 
         return furnis
+
+
+class HWallUpdate:
+    '''
+        def update(p):
+            wall = HWallUpdate(p.packet)
+            print(wall.widthX, wall.widthY, wall.lengthX, wall.lengthY)
+            # id / cord / rotation / widthX / widthY / lengthX / lengthY
+
+        ext.intercept(Direction.TO_SERVER, update, 'MoveWallItem')
+    '''
+    def __init__(self, packet):
+        self.id, self.cord = packet.read('is')
+
+        self.cord = self.cord.split()
+        self.rotation = self.cord[2]
+        self.widthX, self.widthY = self.cord[0].split(',')
+        self.widthX = self.widthX.split('=')[1]
+        self.lengthX, self.lengthY = self.cord[1].split(',')
+        self.lengthX = self.lengthX.split('=')[1]
 
 
 class HInventoryItem:
