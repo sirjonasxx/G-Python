@@ -9,7 +9,8 @@ _Note: during Windows installation, make sure to select "Add python to PATH" if 
 ![image](https://user-images.githubusercontent.com/36828922/129458391-b10339e0-5671-4b8e-b644-da417730514f.png)
 
 
-> python -m pip install g-python
+Then execute the following in a terminal:
+`python -m pip install g-python`
 
 ## Features
 G-Python exports the following modules:
