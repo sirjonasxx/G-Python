@@ -5,7 +5,7 @@
  
 ## Installation
 _Requires python >= 3.2: https://www.python.org/downloads/_  
-_Note: during Windows installation, make sure to select "Add python to PATH"_
+_Note: during Windows installation, make sure to select "Add python to PATH" if you want to install G-Python extensions in G-Earth_  
 ![image](https://user-images.githubusercontent.com/36828922/129458391-b10339e0-5671-4b8e-b644-da417730514f.png)
 
 
