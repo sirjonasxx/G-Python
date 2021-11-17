@@ -6,7 +6,7 @@ class HGroupMode(Enum):
     ADMINAPPROVAL: 1
     CLOSED: 2
 
-        
+
 class HBubble(Enum):
     NORMAL: 0
     RED: 3
@@ -31,7 +31,7 @@ class HBubble(Enum):
     STORM: 27
     PIRATE: 29
     AMBASSADOR: 37
-        
+
 
 class HDance(Enum):
     NONE = 0
@@ -39,8 +39,8 @@ class HDance(Enum):
     POGOMOGO = 2
     DUCKFUNK = 3
     THEROLLIE = 4
-    
-    
+
+
 class HAction(Enum):
     NONE = 0
     MOVE = 1
@@ -101,6 +101,53 @@ class HStance(Enum):
     LAY = 2
 
 
+class HRelationshipStatus(Enum):
+    NONE = 0
+    HEART = 1
+    SMILEY = 2
+    SKULL = 3
+
+
+class HSpecialType(Enum):
+    DEFAULT = 1
+    WALLPAPER = 2
+    FLOORPAINT = 3
+    LANDSCAPE = 4
+    POSTIT = 5
+    POSTER = 6
+    SOUNDSET = 7
+    TRAXSONG = 8
+    PRESENT = 9
+    ECOTRONBOX = 10
+    TROPHY = 11
+    CREDITFURNI = 12
+    PETSHAMPOO = 13
+    PETCUSTOMPART = 14
+    PETCUSTOMPARTSHAMPOO = 15
+    PETSADDLE = 16
+    GUILDFURNI = 17
+    GAMEFURNI = 18
+    MONSTERPLANTSEED = 19
+    MONSTERPLANTREVIVIAL = 20
+    MONSTERPLANTREBREED = 21
+    MONSTERPLANTFERTILIZE = 22
+    FIGUREPURCHASABLESET = 23
+
+
+class HDoorMode(Enum):
+    OPEN = 0
+    DOORBELL = 1
+    PASSWORD = 2
+    INVISIBLE = 3
+
+
+class HProductType(Enum):
+    WALLITEM = 'I'
+    FLOORITEM = 'S'
+    EFFECT = 'E'
+    BADGE = 'B'
+
+
 class HPoint:
     def __init__(self, x, y, z=0.0):
         self.x = x
@@ -116,9 +163,11 @@ class HPoint:
 
 class HEntity:
     def __init__(self, packet: HPacket):
-        self.id, self.name, self.motto, self.figure_id, self.index, x, y, z, _, entity_type_id = \
+        self.id, self.name, self.motto, self.figure_id, self.index, x, y, z, facing_id, entity_type_id = \
             packet.read('isssiiisii')
         self.tile = HPoint(x, y, float(z))
+        self.headFacing = HDirection(facing_id)
+        self.bodyFacing = HDirection(facing_id)
         self.entity_type = HEntityType(entity_type_id)
 
         self.stuff = []
@@ -147,6 +196,7 @@ class HEntity:
         return [HEntity(packet) for _ in range(packet.read_int())]
 
 
+"""
 class HFriends:
     def __init__(self, packet):
         self.friends = []
@@ -158,6 +208,42 @@ class HFriends:
                 _, _ = packet.read('BB')
             _, _ = packet.read('Bs')
             self.friends.append([id_user, name, clothes, motto])
+ """
+
+
+class HFriend:
+    def __init__(self, packet):
+        self.id, self.name, gender_id, self.online, self.following_allowed, self.figure, self.category_id,\
+        self.motto, self.real_name, self.facebook_id, self.persisted_message_user, self.vip_member,\
+        self.pocket_habbo_user, relationship_status_id = packet.read('isiBBsisssBBBu')
+
+        self.gender = HGender.FEMALE if gender_id == 0 else HGender.MALE
+        self.relationship_status = HRelationshipStatus(relationship_status_id)
+
+    def __str__(self):
+        return "id: {}, name: {}, gender: {}, relationship status: {}"\
+        .format(self.id, self.name, self.gender, self.relationship_status.name)
+
+    @classmethod
+    def parse_from_fragment(cls, packet):
+        # int packetCount skipped
+        # int packetIndex skipped
+        packet.read_index = 14
+        return [HFriend(packet) for _ in range(packet.read_int())]
+
+    @classmethod
+    def parse_from_update(cls, packet):
+        categories = {}
+        for _ in range(packet.read_int()):
+            id = packet.read_int()
+            categories[id] = packet.read_string()
+
+        friends = [HFriend(packet) for _ in range(packet.read_int())]
+
+        for friend in friends:
+            friend.category_name = categories.get(friend.category_id, None)
+
+        return friends
 
 
 def read_stuff(packet, category):
@@ -315,17 +401,61 @@ class HInventoryItem:
         _, test = packet.read('is')
         self.is_floor_furni = (test == 'S')
 
-        self.id, self.type_id, _, self.category = packet.read('iiii')
+        self.id, self.type_id, special_type_id, self.category = packet.read('iiii')
+        self.special_type = HSpecialType(special_type_id)
         self.stuff = read_stuff(packet, self.category)
 
-        self.is_groupable, self.is_tradeable, _, self.market_place_allowed, self.seconds_to_expiration, \
-        self.has_rent_period_started, self.room_Id = packet.read('BBBBiBi')
+        self.is_recyclable, self.is_tradeable, self.is_groupable, self.market_place_allowed,\
+        self.seconds_to_expiration, self.has_rent_period_started, self.room_Id = packet.read('BBBBiBi')
 
         if self.is_floor_furni:
             self.slot_id = packet.read_string()
-            packet.read_int()
+            self.extra = packet.read_int()
 
     @classmethod
     def parse(cls, packet):
         total, current = packet.read('ii')
         return [HInventoryItem(packet) for _ in range(packet.read_int())]
+
+
+class HNavigatorSearchResult:
+    def __init__(self, packet: HPacket):
+        self.search_code, self.filtering_data = packet.read('ss')
+
+        self.blocks = [self.HNavigatorBlock(packet) for _ in range(packet.read_int())]
+
+    class HNavigatorBlock:
+        def __init__(self, packet: HPacket):
+            self.search_code, self.text, self.action_allowed, self.is_force_closed, self.view_mode = packet.read('ssiBi')
+
+            self.rooms = [self.HNavigatorRoom(packet) for _ in range(packet.read_int())]
+
+        class HNavigatorRoom:
+            def __init__(self, packet: HPacket):
+                self.flat_id, self.room_name, self.owner_id, self.owner_name, door_mode_id, self.user_count,\
+                self.max_user_count, self.description, self.trade_mode, self.score, self.ranking, self.category_id\
+                = packet.read('isisiiisiiii')
+
+                self.door_mode = HDoorMode(door_mode_id)
+
+                self.tags = [packet.read_string() for _ in range(packet.read_int())]
+
+                multiUse = packet.read_int()
+
+                if (multiUse & 1) > 0:
+                    self.official_room_pic_ref = packet.read_string()
+
+                if (multiUse & 2) > 0:
+                    self.group_id, self.group_name, self.group_badge_code = packet.read('iss')
+
+                if (multiUse & 4) > 0:
+                    self.room_ad_name, self.room_ad_description, self.room_ad_expires_in_min = packet.read('ssi')
+
+                self.show_owner = (multiUse & 8) > 0
+                self.allow_pets = (multiUse & 16) > 0
+                self.display_room_entry_ad = (multiUse & 32) > 0
+
+            def __str__(self):
+                return "id: {}, roomname: {}, door_mode: {}, users: {}/{}, description: {}".format(
+                   self.flat_id, self.room_name, self.door_mode.name, self.user_count, self.max_user_count, self.description)
+
