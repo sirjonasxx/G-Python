@@ -45,8 +45,8 @@ class ConsoleBot:
         self._bot_settings = HBotProfile() if bot_settings is None else bot_settings
         self._commands = {}
 
-        self._chat_opened: bool = True
-        self._once_per_connection: bool = True
+        self._chat_opened = False
+        self._once_per_connection = False
 
         extension.intercept(Direction.TO_SERVER, self.should_open_chat)
         extension.intercept(
@@ -58,16 +58,16 @@ class ConsoleBot:
         )
 
     def should_open_chat(self, hmessage: HMessage) -> None:
-        if self._chat_opened:
-            self._chat_opened = False
+        if not self._chat_opened:
+            self._chat_opened = True
 
             if hmessage.packet.header_id != 4000:
-                self._once_per_connection = False
+                self._once_per_connection = True
                 self.create_chat()
 
     def on_friend_list(self, ignored_hmessage: HMessage) -> None:
-        if self._once_per_connection:
-            self._once_per_connection = False
+        if not self._once_per_connection:
+            self._once_per_connection = True
 
             time.sleep(1)
             self.create_chat()
