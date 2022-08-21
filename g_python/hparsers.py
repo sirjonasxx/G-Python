@@ -1,6 +1,17 @@
 from enum import Enum
 from g_python.hpacket import HPacket
 
+class HClientHost(Enum):
+    BRAZIL: "game-br.habbo.com"
+    DEUTSCHLAND: "game-de.habbo.com"
+    SPAIN: "game-es.habbo.com"
+    FINLAND: "game-fi.habbo.com"
+    FRANCE: "game-fr.habbo.com"
+    ITALY: "game-it.habbo.com"
+    NETHERLANDS: "game-nl.habbo.com"
+    TURKEY: "game-tr.habbo.com"
+    UNITED_STATES_UK: "game-us.habbo.com"
+
 class HGroupMode(Enum):
     OPEN: 0
     ADMINAPPROVAL: 1
