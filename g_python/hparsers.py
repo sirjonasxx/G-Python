@@ -1,6 +1,7 @@
 from enum import Enum
 from g_python.hpacket import HPacket
 
+
 class HClientHost(Enum):
     BRAZIL: "game-br.habbo.com"
     DEUTSCHLAND: "game-de.habbo.com"
