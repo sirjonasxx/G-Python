@@ -12,6 +12,7 @@ class HClientHost(Enum):
     NETHERLANDS: "game-nl.habbo.com"
     TURKEY: "game-tr.habbo.com"
     UNITED_STATES: "game-us.habbo.com"
+    SANDBOX: "game-s2.habbo.com"
 
 class HGroupMode(Enum):
     OPEN: 0
