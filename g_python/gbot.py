@@ -1,5 +1,4 @@
 import random
-import threading
 import time
 from datetime import datetime
 from typing import Callable
@@ -30,16 +29,13 @@ class HBotProfile:
         "is_pocket_habbo_user": False,
     }
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs):
         for key, value in HBotProfile.settings.items():
             setattr(self, key, value if key not in kwargs else kwargs[key])
 
 
-# Thanks to denio4321 and sirjonasxx I got some ideas from them
 class ConsoleBot:
-    def __init__(
-        self, extension: Extension, prefix: str = ":", bot_settings: HBotProfile = None
-    ) -> None:
+    def __init__(self, extension: Extension, prefix: str = ":", bot_settings: HBotProfile = None):
         self._extension = extension
         self._prefix = prefix
         self._bot_settings = HBotProfile() if bot_settings is None else bot_settings
@@ -65,7 +61,7 @@ class ConsoleBot:
                 self._once_per_connection = True
                 self.create_chat()
 
-    def on_friend_list(self, ignored_hmessage: HMessage) -> None:
+    def on_friend_list(self, _: HMessage) -> None:
         if not self._once_per_connection:
             self._once_per_connection = True
 
@@ -139,16 +135,26 @@ class ConsoleBot:
         self._extension.send_to_client(packet)
 
     def send(self, message: str, as_invite: bool = False) -> None:
+        """Send a message from the bot
+
+        Args:
+            message (str): Message you want to send
+            as_invite (bool, optional): Send an invite instead of message. Defaults to False.
+        """
         if as_invite:
             self._extension.send_to_client(
                 HPacket("RoomInvite", self._bot_settings.id, message)
             )
-
-            return None
-
-        self._extension.send_to_client(
-            HPacket("NewConsole", self._bot_settings.id, message, 0, "")
-        )
+        else:
+            self._extension.send_to_client(
+                HPacket("NewConsole", self._bot_settings.id, message, 0, "")
+            )
 
     def add_command(self, command: str, callback: Callable) -> None:
+        """Create a command for the bot
+
+        Args:
+            command (str): name of the command
+            callback (Callable): function that will be called 
+        """
         self._commands[command] = callback
