@@ -188,7 +188,7 @@ class Extension:
         while not self.is_closed():
             try:
                 packet = self.__read_gearth_packet()
-            except:
+            except Exception:
                 if not self.is_closed():
                     self.stop()
                 return
@@ -396,7 +396,7 @@ class Extension:
         else:
             self.__events[event_name] = [func]
 
-    def intercept(self, direction: Direction, callback, id=-1, mode='default'):
+    def intercept(self, direction: Direction, callback, p_id=-1, mode='default'):
         """
         :param direction: Direction.TOCLIENT or Direction.TOSERVER
         :param callback: function that takes HMessage as an argument
@@ -432,9 +432,9 @@ class Extension:
         if mode == 'async_modify':
             callback = callback_async_mod
 
-        if id not in self.__intercept_listeners[direction]:
-            self.__intercept_listeners[direction][id] = []
-        self.__intercept_listeners[direction][id].append(callback)
+        if p_id not in self.__intercept_listeners[direction]:
+            self.__intercept_listeners[direction][p_id] = []
+        self.__intercept_listeners[direction][p_id].append(callback)
 
     def remove_intercept(self, p_id=-1):
         """
@@ -506,7 +506,7 @@ class Extension:
 
         return self.__await_response(request)[1]
 
-    def string_to_packet(self, string):
+    def string_to_packet(self, string: str) -> HPacket:
         request = HPacket(OUTGOING_MESSAGES.STRING_TO_PACKET_REQUEST.value)
         request.append_string(string, 4)
 
