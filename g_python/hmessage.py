@@ -22,12 +22,9 @@ class HMessage:
         return obj
 
     def __repr__(self):
-        return "{}\t{}\t{}\t{}".format(
-            '1' if self.is_blocked else '0',
-            self.hindex,
-            'TOCLIENT' if self.direction == Direction.TO_CLIENT else 'TOSERVER',
-            repr(self.packet)
-        )
+        blocked = '1' if self.is_blocked else '0'
+        direction = 'TOCLIENT' if self.direction == Direction.TO_CLIENT else 'TOSERVER'
+        return f"{blocked}\t{self.hindex}\t{direction}\t{repr(self.packet)}"
 
     def index(self):
         return self.hindex
