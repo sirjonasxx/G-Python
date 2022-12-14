@@ -1,31 +1,32 @@
 from .hdirection import Direction
+from .gextension import Extension
 
 
 class HPacket:
     default_extension = None
 
-    def __init__(self, id, *objects):
-        self.incomplete_identifier = None if (type(id) is int) else id
+    def __init__(self, p_id, *objects):
+        self.incomplete_identifier = None if isinstance(p_id, int) else p_id
 
         self.read_index = 6
         self.bytearray = bytearray(b'\x00\x00\x00\x02\xff\xff')
         if self.incomplete_identifier is None:
-            self.replace_short(4, id)
+            self.replace_short(4, p_id)
         self.is_edited = False
 
-        for object in objects:
-            if type(object) is str:
+        for obj in objects:
+            if isinstance(obj, str):
                 self.append_string(object)
-            if type(object) is int:
+            if isinstance(obj, int):
                 self.append_int(object)
-            if type(object) is bool:
+            if isinstance(obj, bool):
                 self.append_bool(object)
-            if type(object) is bytes:
+            if isinstance(obj, bytes):
                 self.append_bytes(object)
 
         self.is_edited = False
 
-    def fill_id(self, direction: Direction, extension=None) -> bool:
+    def fill_id(self, direction: Direction, extension: Extension = None) -> bool:
         if self.incomplete_identifier is not None:
             if extension is None:
                 if self.default_extension is None:
@@ -43,10 +44,10 @@ class HPacket:
 
     # https://stackoverflow.com/questions/682504/what-is-a-clean-pythonic-way-to-have-multiple-constructors-in-python
     @classmethod
-    def from_bytes(cls, bytes):
+    def from_bytes(cls, p_bytes):
         obj = cls.__new__(cls)  # Does not call __init__
         super(HPacket, obj).__init__()  # Don't forget to call any polymorphic base class initializers
-        obj.bytearray = bytearray(bytes)
+        obj.bytearray = bytearray(p_bytes)
         obj.read_index = 6
         obj.is_edited = False
         return obj
@@ -81,8 +82,8 @@ class HPacket:
         return self.read_int(0)
 
     def __str__(self):
-        return "(id:{}, length:{}) -> {}".format(self.header_id() if not self.is_incomplete_packet() else self.incomplete_identifier,
-                                                 len(self), bytes(self))
+        p_id = self.header_id() if not self.is_incomplete_packet() else self.incomplete_identifier
+        return f"(id:{p_id}, length:{len(self)}) -> {bytes(self)}"
 
     def is_incomplete_packet(self) -> bool:
         return self.incomplete_identifier is not None
@@ -143,15 +144,15 @@ class HPacket:
             index = self.read_index
             self.read_index += head + int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
 
-        len = int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
-        return self.bytearray[index + head:index + head + len].decode(encoding)
+        lenght = int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
+        return self.bytearray[index + head:index + head + lenght].decode(encoding)
 
-    def read_bytes(self, len, index=None) -> bytearray:
+    def read_bytes(self, lenght, index=None) -> bytearray:
         if index is None:
             index = self.read_index
-            self.read_index += len
+            self.read_index += lenght
 
-        return self.bytearray[index:index + len]
+        return self.bytearray[index:index + lenght]
 
     def read_byte(self, index=None) -> int:
         if index is None:

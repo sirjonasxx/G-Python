@@ -4,7 +4,6 @@ import threading
 from enum import Enum
 from .hpacket import HPacket
 from .hmessage import HMessage, Direction
-import json
 
 MINIMUM_GEARTH_VERSION = "1.4.1"
 
@@ -31,7 +30,8 @@ class OUTGOING_MESSAGES(Enum):
     EXTENSION_CONSOLE_LOG = 98
 
 
-EXTENSION_SETTINGS_DEFAULT = {"use_click_trigger": False, "can_leave": True, "can_delete": True}
+EXTENSION_SETTINGS_DEFAULT = {
+    "use_click_trigger": False, "can_leave": True, "can_delete": True}
 EXTENSION_INFO_REQUIRED_FIELDS = ["title", "description", "version", "author"]
 
 PORT_FLAG = ["--port", "-p"]
@@ -51,8 +51,8 @@ def fill_settings(settings, defaults):
     return settings
 
 
-def get_argument(args, flags):
-    if type(flags) == str:
+def get_argument(args, flags: str):
+    if isinstance(flags, str):
         flags = [flags]
 
     for potential_flag in flags:
@@ -67,23 +67,27 @@ def get_argument(args, flags):
 class Extension:
     def __init__(self, extension_info, args, extension_settings=None, silent=False):
         if not silent:
-            print("WARNING: This version of G-Python requires G-Earth >= {}".format(MINIMUM_GEARTH_VERSION), file=sys.stderr)
+            print(
+                f"WARNING: This version of G-Python requires G-Earth >= {MINIMUM_GEARTH_VERSION}", file=sys.stderr)
 
-        extension_settings = fill_settings(extension_settings, EXTENSION_SETTINGS_DEFAULT)
+        extension_settings = fill_settings(
+            extension_settings, EXTENSION_SETTINGS_DEFAULT)
 
         if get_argument(args, PORT_FLAG) is None:
-            raise Exception('Port was not specified (argument example: -p 9092)')
+            raise Exception(
+                'Port was not specified (argument example: -p 9092)')
 
         for key in EXTENSION_INFO_REQUIRED_FIELDS:
             if key not in extension_info:
-                raise Exception('Extension info error: {} field missing'.format(key))
+                raise Exception(f'Extension info error: {key} field missing')
 
         port = int(get_argument(args, PORT_FLAG))
         file = get_argument(args, FILE_FLAG)
         cookie = get_argument(args, COOKIE_FLAG)
 
         self.__sock = None
-        self.__lost_packets = 0
+        self._lost_packets = 0
+        self.__await_connect_packet = None
 
         self._extension_info = extension_info
         self.__port = port
@@ -99,7 +103,8 @@ class Extension:
         self.__stream_lock = threading.Lock()
 
         self.__events = {}
-        self.__intercept_listeners = {Direction.TO_CLIENT: {-1: []}, Direction.TO_SERVER: {-1: []}}
+        self.__intercept_listeners = {
+            Direction.TO_CLIENT: {-1: []}, Direction.TO_SERVER: {-1: []}}
 
         self.__request_lock = threading.Lock()
         self.__response_barrier = threading.Barrier(2)
@@ -114,7 +119,8 @@ class Extension:
 
         length_buffer = bytearray(4)
         while write_pos < 4:
-            n_read = self.__sock.recv_into(memoryview(length_buffer)[write_pos:])
+            n_read = self.__sock.recv_into(
+                memoryview(length_buffer)[write_pos:])
             if n_read == 0:
                 raise EOFError
             write_pos += n_read
@@ -123,7 +129,8 @@ class Extension:
         packet_buffer = length_buffer + bytearray(packet_length)
 
         while write_pos < 4 + packet_length:
-            n_read = self.__sock.recv_into(memoryview(packet_buffer)[write_pos:])
+            n_read = self.__sock.recv_into(
+                memoryview(packet_buffer)[write_pos:])
             if n_read == 0:
                 raise EOFError
             write_pos += n_read
@@ -162,14 +169,16 @@ class Extension:
                     if elem['Hash'] is not None:
                         potential_intercept_ids.add(elem['Hash'])
 
-            for id in potential_intercept_ids:
-                if id in self.__intercept_listeners[habbo_message.direction]:
-                    for func in self.__intercept_listeners[habbo_message.direction][id]:
+            for p_id in potential_intercept_ids:
+                if p_id in self.__intercept_listeners[habbo_message.direction]:
+                    for func in self.__intercept_listeners[habbo_message.direction][p_id]:
                         func(habbo_message)
                         habbo_packet.reset()
 
-            response_packet = HPacket(OUTGOING_MESSAGES.MANIPULATED_PACKET.value)
-            response_packet.append_string(repr(habbo_message), head=4, encoding='iso-8859-1')
+            response_packet = HPacket(
+                OUTGOING_MESSAGES.MANIPULATED_PACKET.value)
+            response_packet.append_string(
+                repr(habbo_message), head=4, encoding='iso-8859-1')
             self.__send_to_stream(response_packet)
 
     def __connection_thread(self):
@@ -202,7 +211,8 @@ class Extension:
                 self.__send_to_stream(response)
 
             elif message_type == INCOMING_MESSAGES.CONNECTION_START:
-                host, port, hotel_version, client_identifier, client_type = packet.read("sisss")
+                host, port, hotel_version, client_identifier, client_type = packet.read(
+                    "sisss")
                 self.__parse_packet_infos(packet)
 
                 self.connection_info = {'host': host, 'port': port, 'hotel_version': hotel_version,
@@ -228,7 +238,8 @@ class Extension:
             elif message_type == INCOMING_MESSAGES.INIT:
                 self.__raise_event('init')
                 self.write_to_console(
-                    'g_python extension "{}" sucessfully initialized'.format(self._extension_info['title']),
+                    'g_python extension "{}" sucessfully initialized'.format(
+                        self._extension_info['title']),
                     'green',
                     False
                 )
@@ -241,8 +252,10 @@ class Extension:
                 self.__raise_event('double_click')
 
             elif message_type == INCOMING_MESSAGES.PACKET_INTERCEPT:
-                habbo_msg_as_string = packet.read_string(head=4, encoding='iso-8859-1')
-                habbo_message = HMessage.reconstruct_from_java(habbo_msg_as_string)
+                habbo_msg_as_string = packet.read_string(
+                    head=4, encoding='iso-8859-1')
+                habbo_message = HMessage.reconstruct_from_java(
+                    habbo_msg_as_string)
                 self.__manipulation_lock.acquire()
                 self.__manipulate_messages.append(habbo_message)
                 self.__manipulation_lock.release()
@@ -255,40 +268,43 @@ class Extension:
                 self.__response_barrier.wait()
 
             elif message_type == INCOMING_MESSAGES.STRING_TO_PACKET_RESPONSE:
-                packet_string = packet.read_string(head=4, encoding='iso-8859-1')
+                packet_string = packet.read_string(
+                    head=4, encoding='iso-8859-1')
                 self.__response = HPacket.reconstruct_from_java(packet_string)
                 self.__response_barrier.wait()
 
-    def __parse_packet_infos(self, packet : HPacket):
+    def __parse_packet_infos(self, packet: HPacket):
         incoming = {}
         outgoing = {}
 
         length = packet.read_int()
         for _ in range(length):
-            headerId, hash, name, structure, isOutgoing, source = packet.read('isssBs')
-            name = name if name is not 'NULL' else None
-            hash = hash if hash is not 'NULL' else None
-            structure = structure if structure is not 'NULL' else None
+            header_id, p_hash, name, structure, is_outgoing, source = packet.read(
+                'isssBs')
+            name = name if name != 'NULL' else None
+            p_hash = p_hash if p_hash != 'NULL' else None
+            structure = structure if structure != 'NULL' else None
 
-            elem = {'Id': headerId, 'Name': name, 'Hash': hash, 'Structure': structure, 'Source': source}
+            elem = {'Id': header_id, 'Name': name, 'Hash': p_hash,
+                    'Structure': structure, 'Source': source}
 
-            packet_dict = outgoing if isOutgoing else incoming
-            if headerId not in packet_dict:
-                packet_dict[headerId] = []
-            packet_dict[headerId].append(elem)
+            packet_dict = outgoing if is_outgoing else incoming
+            if header_id not in packet_dict:
+                packet_dict[header_id] = []
+            packet_dict[header_id].append(elem)
 
-            if hash is not None:
-                if hash not in packet_dict:
-                    packet_dict[hash] = []
-                packet_dict[hash].append(elem)
+            if p_hash is not None:
+                if p_hash not in packet_dict:
+                    packet_dict[p_hash] = []
+                packet_dict[p_hash].append(elem)
 
             if name is not None:
                 if name not in packet_dict:
                     packet_dict[name] = []
                 packet_dict[name].append(elem)
 
-        self.packet_infos = {Direction.TO_CLIENT: incoming, Direction.TO_SERVER: outgoing}
-
+        self.packet_infos = {Direction.TO_CLIENT: incoming,
+                             Direction.TO_SERVER: outgoing}
 
     def __send_to_stream(self, packet):
         self.__stream_lock.acquire()
@@ -301,7 +317,8 @@ class Extension:
 
     def __raise_event(self, event_name):
         if event_name in self.__events:
-            t = threading.Thread(target=self.__callbacks, args=(self.__events[event_name],))
+            t = threading.Thread(target=self.__callbacks,
+                                 args=(self.__events[event_name],))
             t.start()
 
     def __send(self, direction, packet: HPacket):
@@ -309,21 +326,23 @@ class Extension:
 
             old_settings = None
             if packet.is_incomplete_packet():
-                old_settings = (packet.header_id(), packet.is_edited, packet.incomplete_identifier)
+                old_settings = (packet.header_id(),
+                                packet.is_edited, packet.incomplete_identifier)
                 packet.fill_id(direction, self)
 
-            if self.connection_info == None:
-                self.__lost_packets += 1
-                print("Could not send packet because G-Earth isn't connected to a client", file=sys.stderr)
+            if self.connection_info is None:
+                self._lost_packets += 1
+                print(
+                    "Could not send packet because G-Earth isn't connected to a client", file=sys.stderr)
                 return False
 
             if packet.is_corrupted():
-                self.__lost_packets += 1
+                self._lost_packets += 1
                 print('Could not send corrupted', file=sys.stderr)
                 return False
 
             if packet.is_incomplete_packet():
-                self.__lost_packets += 1
+                self._lost_packets += 1
                 print('Could not send incomplete packet', file=sys.stderr)
                 return False
 
@@ -338,7 +357,7 @@ class Extension:
 
             return True
         else:
-            self.__lost_packets += 1
+            self._lost_packets += 1
             return False
 
     def is_closed(self):
@@ -353,7 +372,7 @@ class Extension:
         :param packet: a HPacket() or a string representation
         """
 
-        if type(packet) is str:
+        if isinstance(packet, str):
             packet = self.string_to_packet(packet)
         self.__send(Direction.TO_CLIENT, packet)
 
@@ -363,7 +382,7 @@ class Extension:
         :param packet: a HPacket() or a string representation
         """
 
-        if type(packet) is str:
+        if isinstance(packet, str):
             packet = self.string_to_packet(packet)
         self.__send(Direction.TO_SERVER, packet)
 
@@ -389,43 +408,46 @@ class Extension:
         """
         original_callback = callback
 
+        def callback_async(hmessage: HMessage):
+            copy = HMessage(hmessage.packet, hmessage.direction,
+                            hmessage.hindex, hmessage.is_blocked)
+            t = threading.Thread(target=original_callback, args=[copy])
+            t.start()
+
+        def callback_async_mod(hmessage: HMessage):
+            hmessage.is_blocked = True
+            copy = HMessage(hmessage.packet, hmessage.direction,
+                            hmessage.hindex, False)
+            t = threading.Thread(target=callback_send, args=[copy])
+            t.start()
+
+        def callback_send(hmessage: HMessage):
+            original_callback(hmessage)
+            if not hmessage.is_blocked:
+                self.__send(hmessage.direction, hmessage.packet)
+
         if mode == 'async':
-            def new_callback(hmessage : HMessage):
-                copy = HMessage(hmessage.packet, hmessage.direction, hmessage._index, hmessage.is_blocked)
-                t = threading.Thread(target=original_callback, args=[copy])
-                t.start()
-            callback = new_callback
+            callback = callback_async
 
         if mode == 'async_modify':
-            def callback_send(hmessage : HMessage):
-                original_callback(hmessage)
-                if not hmessage.is_blocked:
-                    self.__send(hmessage.direction, hmessage.packet)
-
-            def new_callback(hmessage : HMessage):
-                hmessage.is_blocked = True
-                copy = HMessage(hmessage.packet, hmessage.direction, hmessage._index, False)
-                t = threading.Thread(target=callback_send, args=[copy])
-                t.start()
-            callback = new_callback
+            callback = callback_async_mod
 
         if id not in self.__intercept_listeners[direction]:
             self.__intercept_listeners[direction][id] = []
         self.__intercept_listeners[direction][id].append(callback)
 
-    def remove_intercept(self, id=-1):
+    def remove_intercept(self, p_id=-1):
         """
         Clear intercepts per id or all of them when none is given
         """
 
-        if id == -1:
-            for direction in self.__intercept_listeners:
-                for identifier in self.__intercept_listeners[direction]:
-                    del self.__intercept_listeners[direction][identifier]
+        if p_id == -1:
+            for direction, identifier in self.__intercept_listeners.items():
+                del self.__intercept_listeners[direction][identifier]
         else:
             for direction in self.__intercept_listeners:
-                if id in self.__intercept_listeners[direction]:
-                    del self.__intercept_listeners[direction][id]        
+                if p_id in self.__intercept_listeners[direction]:
+                    del self.__intercept_listeners[direction][p_id]
 
     def start(self):
         """
@@ -457,8 +479,10 @@ class Extension:
         """
         Writes a message to the G-Earth console
         """
-        message = '[{}]{}{}'.format(color, (self._extension_info['title'] + ' --> ') if mention_title else '', text)
-        packet = HPacket(OUTGOING_MESSAGES.EXTENSION_CONSOLE_LOG.value, message)
+        title = (self._extension_info['title'] + ' --> ') if mention_title else ''
+        message = f"[{color}]{title}{text}"
+        packet = HPacket(
+            OUTGOING_MESSAGES.EXTENSION_CONSOLE_LOG.value, message)
         self.__send_to_stream(packet)
 
     def __await_response(self, request):
