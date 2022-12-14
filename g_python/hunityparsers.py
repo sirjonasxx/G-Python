@@ -1,6 +1,4 @@
-from enum import Enum
 from struct import unpack
-
 from .hparsers import HPoint, HEntityType, HDirection
 
 
@@ -9,9 +7,9 @@ class HUnityEntity:
         self.id, self.name, self.motto, self.figure_id, self.index, x, y, z, _, entity_type_id = \
             packet.read('lsssiiisii')
         self.tile = get_tile_from_coords(x, y, z)
-        self.nextTile = None
-        self.headFacing = None
-        self.bodyFacing = None
+        self.next_tile = None
+        self.head_facing = None
+        self.body_facing = None
         self.entity_type = HEntityType(entity_type_id)
 
         self.stuff = []
@@ -31,33 +29,30 @@ class HUnityEntity:
                 self.stuff.append(packet.read_short())
 
     def __str__(self):
-        return '<HUnityEntity> [{}] {} - {}'.format(self.index, self.name, self.entity_type.name)
+        return f'<HUnityEntity> [{self.index}] {self.name} - {self.entity_type.name}'
 
     def try_update(self, update):
         self.tile = update.tile
-        self.nextTile = update.nextTile
-        self.headFacing = update.headFacing
-        self.bodyFacing = update.bodyFacing
-
+        self.next_tile = update.next_tile
+        self.head_facing = update.head_facing
+        self.body_facing = update.body_facing
 
     @classmethod
     def parse(cls, packet):
         return [HUnityEntity(packet) for _ in range(packet.read_short())]
 
 
-
-
 class HUnityStatus:
     def __init__(self, packet):
         self.index, x, y, z, head, body, self.action = packet.read('iiisiis')
         self.tile = get_tile_from_coords(x, y, z)
-        self.headFacing = HDirection(head)
-        self.bodyFacing = HDirection(body)
-        self.nextTile = self.predict_next_tile()
+        self.head_facing = HDirection(head)
+        self.body_facing = HDirection(body)
+        self.next_tile = self.predict_next_tile()
 
     def __str__(self):
         return '<HUnityStatus> [{}] - X: {} - Y: {} - Z: {} - head {} - body {} - next tile {}'\
-            .format(self.index, self.tile.x, self.tile.y, self.tile.z, self.headFacing.name, self.bodyFacing.name, self.nextTile)
+            .format(self.index, self.tile.x, self.tile.y, self.tile.z, self.head_facing.name, self.body_facing.name, self.next_tile)
 
     def predict_next_tile(self):
         actions = self.action.split('/mv ')
@@ -121,7 +116,7 @@ class HFUnityFloorItem:
         # another weird float
         self.height = unpack('>f', bytearray(packet.read('bbbb')))[0]
 
-        a, b, self.category = packet.read('iii')
+        _, _, self.category = packet.read('iii')
         self.stuff = read_stuff(packet, self.category)
 
         self.seconds_to_expiration, self.usage_policy, self.owner_id = packet.read('iil')
@@ -134,8 +129,8 @@ class HFUnityFloorItem:
     def parse(cls, packet):
         owners = {}
         for _ in range(packet.read_short()):
-            id = packet.read_long()
-            owners[id] = packet.read_string()
+            e_id = packet.read_long()
+            owners[e_id] = packet.read_string()
 
         furnis = [HFUnityFloorItem(packet) for _ in range(packet.read_short())]
         for furni in furnis:

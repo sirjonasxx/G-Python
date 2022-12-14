@@ -155,6 +155,6 @@ class ConsoleBot:
 
         Args:
             command (str): name of the command
-            callback (Callable): function that will be called 
+            callback (Callable): function that will be called
         """
         self._commands[command] = callback
