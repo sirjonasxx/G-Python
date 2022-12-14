@@ -11,7 +11,7 @@ class UnityRoomUsers:
         self.room_users = {}
         self.__callback_new_users = None
 
-        self.__ext = ext
+        self._ext = ext
 
         self.__lock = threading.Lock()
 
@@ -98,7 +98,7 @@ class UnityRoomFurni:
         self.__callback_floor_furni = None
         self.__callback_wall_furni = None
 
-        self.__ext = ext
+        self._ext = ext
         self.__request_id = request
 
         ext.intercept(Direction.TO_CLIENT, self.__floor_furni_load, floor_items)
@@ -123,4 +123,4 @@ class UnityRoomFurni:
     def request(self):
         self.floor_furni = []
         self.wall_furni = []
-        self.__ext.send_to_server(HPacket(self.__request_id))
+        self._ext.send_to_server(HPacket(self.__request_id))
