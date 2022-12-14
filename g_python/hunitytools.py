@@ -3,7 +3,7 @@ import threading
 from .gextension import Extension
 from .hmessage import HMessage, Direction
 from .hpacket import HPacket
-from .hunityparsers import HUnityEntity, HFUnityFloorItem
+from .hunityparsers import HUnityEntity, HFUnityFloorItem, HUnityStatus
 
 
 class UnityRoomUsers:
