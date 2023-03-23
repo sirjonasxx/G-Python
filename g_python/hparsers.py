@@ -464,10 +464,7 @@ class HHeightMap:
     def __init__(self, packet):
         self.width, tileCount = packet.read('ii')
         self.height = int(tileCount / self.width)
-
-        print(self.height, self.width, tileCount)
-
-        self.tiles = [packet.read_short() for i in range(tileCount)]
+        self.tiles = [packet.read_short() for _ in range(tileCount)]
 
     def coords_to_index(self, x, y):
         return int(y * self.width + x)
