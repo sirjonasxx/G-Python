@@ -1,6 +1,7 @@
 from enum import Enum
 from g_python.hpacket import HPacket
 
+
 class HGroupMode(Enum):
     OPEN: 0
     ADMINAPPROVAL: 1
@@ -213,16 +214,16 @@ class HFriends:
 
 class HFriend:
     def __init__(self, packet):
-        self.id, self.name, gender_id, self.online, self.following_allowed, self.figure, self.category_id,\
-        self.motto, self.real_name, self.facebook_id, self.persisted_message_user, self.vip_member,\
-        self.pocket_habbo_user, relationship_status_id = packet.read('isiBBsisssBBBu')
+        self.id, self.name, gender_id, self.online, self.following_allowed, self.figure, self.category_id, \
+            self.motto, self.real_name, self.facebook_id, self.persisted_message_user, self.vip_member, \
+            self.pocket_habbo_user, relationship_status_id = packet.read('isiBBsisssBBBu')
 
         self.gender = HGender.FEMALE if gender_id == 0 else HGender.MALE
         self.relationship_status = HRelationshipStatus(relationship_status_id)
 
     def __str__(self):
-        return "id: {}, name: {}, gender: {}, relationship status: {}"\
-        .format(self.id, self.name, self.gender, self.relationship_status.name)
+        return "id: {}, name: {}, gender: {}, relationship status: {}" \
+            .format(self.id, self.name, self.gender, self.relationship_status.name)
 
     @classmethod
     def parse_from_fragment(cls, packet):
@@ -282,8 +283,9 @@ class HUserUpdate:
         self.nextTile = self.predict_next_tile()
 
     def __str__(self):
-        return '<HUserUpdate> [{}] - X: {} - Y: {} - Z: {} - head {} - body {} - next tile {}'\
-            .format(self.index, self.tile.x, self.tile.y, self.tile.z, self.headFacing.name, self.bodyFacing.name, self.nextTile)
+        return '<HUserUpdate> [{}] - X: {} - Y: {} - Z: {} - head {} - body {} - next tile {}' \
+            .format(self.index, self.tile.x, self.tile.y, self.tile.z, self.headFacing.name, self.bodyFacing.name,
+                    self.nextTile)
 
     def predict_next_tile(self):
         actions = self.action.split('/mv ')
@@ -297,6 +299,7 @@ class HUserUpdate:
     def parse(cls, packet):
         return [HUserUpdate(packet) for _ in range(packet.read_int())]
 
+
 def get_tile_from_coords(x, y, z) -> HPoint:
     try:
         z = float(z)
@@ -304,6 +307,7 @@ def get_tile_from_coords(x, y, z) -> HPoint:
         z = 0.0
 
     return HPoint(x, y, z)
+
 
 class HFloorItem:
     def __init__(self, packet):
@@ -338,13 +342,13 @@ class HFloorItem:
 class HGroup:
     def __init__(self, packet):
         self.id, self.name, self.badge_code, self.primary_color, self.secondary_color, \
-        self.is_favorite, self.owner_id, self.has_forum = packet.read('issssBiB')
+            self.is_favorite, self.owner_id, self.has_forum = packet.read('issssBiB')
 
 
 class HUserProfile:
     def __init__(self, packet):
         self.id, self.username, self.figure, self.motto, self.creation_date, self.achievement_score, \
-        self.friend_count, self.is_friend, self.is_requested_friend, self.is_online = packet.read('issssiiBBB')
+            self.friend_count, self.is_friend, self.is_requested_friend, self.is_online = packet.read('issssiiBBB')
 
         self.groups = [HGroup(packet) for _ in range(packet.read_int())]
         self.last_access_since, self.open_profile = packet.read('iB')
@@ -360,7 +364,7 @@ class HUserProfile:
 class HWallItem:
     def __init__(self, packet):
         self.id, self.type_id, self.location, self.state, self.seconds_to_expiration, self.usage_policy, \
-        self.owner_id = packet.read('sissiii')
+            self.owner_id = packet.read('sissiii')
 
     @classmethod
     def parse(cls, packet):
@@ -385,6 +389,7 @@ class HWallUpdate:
 
         ext.intercept(Direction.TO_SERVER, update, 'MoveWallItem')
     '''
+
     def __init__(self, packet):
         self.id, self.cord = packet.read('is')
 
@@ -405,8 +410,8 @@ class HInventoryItem:
         self.special_type = HSpecialType(special_type_id)
         self.stuff = read_stuff(packet, self.category)
 
-        self.is_recyclable, self.is_tradeable, self.is_groupable, self.market_place_allowed,\
-        self.seconds_to_expiration, self.has_rent_period_started, self.room_Id = packet.read('BBBBiBi')
+        self.is_recyclable, self.is_tradeable, self.is_groupable, self.market_place_allowed, \
+            self.seconds_to_expiration, self.has_rent_period_started, self.room_Id = packet.read('BBBBiBi')
 
         if self.is_floor_furni:
             self.slot_id = packet.read_string()
@@ -426,36 +431,37 @@ class HNavigatorSearchResult:
 
     class HNavigatorBlock:
         def __init__(self, packet: HPacket):
-            self.search_code, self.text, self.action_allowed, self.is_force_closed, self.view_mode = packet.read('ssiBi')
+            self.search_code, self.text, self.action_allowed, self.is_force_closed, self.view_mode = packet.read(
+                'ssiBi')
 
             self.rooms = [self.HNavigatorRoom(packet) for _ in range(packet.read_int())]
 
         class HNavigatorRoom:
             def __init__(self, packet: HPacket):
-                self.flat_id, self.room_name, self.owner_id, self.owner_name, door_mode_id, self.user_count,\
-                self.max_user_count, self.description, self.trade_mode, self.score, self.ranking, self.category_id\
-                = packet.read('isisiiisiiii')
+                self.flat_id, self.room_name, self.owner_id, self.owner_name, door_mode_id, self.user_count, \
+                    self.max_user_count, self.description, self.trade_mode, self.score, self.ranking, self.category_id \
+                    = packet.read('isisiiisiiii')
 
                 self.door_mode = HDoorMode(door_mode_id)
 
                 self.tags = [packet.read_string() for _ in range(packet.read_int())]
 
-                multiUse = packet.read_int()
+                multi_use = packet.read_int()
 
-                if (multiUse & 1) > 0:
+                if (multi_use & 1) > 0:
                     self.official_room_pic_ref = packet.read_string()
 
-                if (multiUse & 2) > 0:
+                if (multi_use & 2) > 0:
                     self.group_id, self.group_name, self.group_badge_code = packet.read('iss')
 
-                if (multiUse & 4) > 0:
+                if (multi_use & 4) > 0:
                     self.room_ad_name, self.room_ad_description, self.room_ad_expires_in_min = packet.read('ssi')
 
-                self.show_owner = (multiUse & 8) > 0
-                self.allow_pets = (multiUse & 16) > 0
-                self.display_room_entry_ad = (multiUse & 32) > 0
+                self.show_owner = (multi_use & 8) > 0
+                self.allow_pets = (multi_use & 16) > 0
+                self.display_room_entry_ad = (multi_use & 32) > 0
 
             def __str__(self):
                 return "id: {}, roomname: {}, door_mode: {}, users: {}/{}, description: {}".format(
-                   self.flat_id, self.room_name, self.door_mode.name, self.user_count, self.max_user_count, self.description)
-
+                    self.flat_id, self.room_name, self.door_mode.name, self.user_count, self.max_user_count,
+                    self.description)

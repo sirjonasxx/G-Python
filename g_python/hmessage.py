@@ -1,16 +1,18 @@
+from typing import Self
+
 from .hpacket import HPacket
 from .hdirection import Direction
 
 
 class HMessage:
-    def __init__(self, packet: HPacket, direction: Direction, index: int, is_blocked=False):
+    def __init__(self, packet: HPacket, direction: Direction, index: int, is_blocked: bool = False):
         self.packet = packet
         self.direction = direction
         self._index = index
         self.is_blocked = is_blocked
 
     @classmethod
-    def reconstruct_from_java(cls, string):
+    def reconstruct_from_java(cls, string: str) -> Self:
         obj = cls.__new__(cls)
         super(HMessage, obj).__init__()
 
@@ -21,7 +23,7 @@ class HMessage:
         obj.packet = HPacket.reconstruct_from_java(split[3])
         return obj
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "{}\t{}\t{}\t{}".format(
             '1' if self.is_blocked else '0',
             self._index,
@@ -29,5 +31,5 @@ class HMessage:
             repr(self.packet)
         )
 
-    def index(self):
+    def index(self) -> int:
         return self._index

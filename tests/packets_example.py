@@ -46,6 +46,7 @@ def on_shout(message : HMessage):
     print("User shouted: {}, 2 seconds ago".format(text))
     message.packet.replace_string(6, "G - " + text)
 
+
 ext.intercept(Direction.TO_SERVER, on_walk, 'MoveAvatar')
 ext.intercept(Direction.TO_SERVER, on_speech, 'Chat', mode='async')
 ext.intercept(Direction.TO_SERVER, on_shout, 'Shout', mode='async_modify')

@@ -88,22 +88,9 @@ class ConsoleBot:
         if hmessage.packet.read_int() == self._bot_settings.id:
             bot = self._bot_settings
 
-            packet = HPacket(
-                "ExtendedProfile",
-                bot.id,
-                bot.username,
-                bot.figure,
-                bot.motto,
-                bot.creation_date,
-                bot.achievement_score,
-                bot.friend_count,
-                bot.is_friend,
-                bot.is_requested_friend,
-                bot.is_online,
-                0,
-                -255,
-                True,
-            )
+            packet = HPacket("ExtendedProfile", bot.id, bot.username, bot.figure, bot.motto, bot.creation_date,
+                             bot.achievement_score, bot.friend_count, bot.is_friend, bot.is_requested_friend,
+                             bot.is_online, 0, -255, True)
 
             self._extension.send_to_client(packet)
 
@@ -114,27 +101,9 @@ class ConsoleBot:
     def create_chat(self) -> None:
         bot = self._bot_settings
 
-        packet = HPacket(
-            "FriendListUpdate",
-            0,
-            1,
-            False,
-            False,
-            "",
-            bot.id,
-            bot.username,
-            bot.gender,
-            bot.is_online,
-            bot.is_following_allowed,
-            bot.figure,
-            bot.category_id,
-            bot.motto,
-            0,
-            bot.is_persisted_message_user,
-            bot.is_vip_member,
-            bot.is_pocket_habbo_user,
-            65537,
-        )
+        packet = HPacket("FriendListUpdate", 0, 1, False, False, "", bot.id, bot.username, bot.gender, bot.is_online,
+                         bot.is_following_allowed, bot.figure, bot.category_id, bot.motto, 0,
+                         bot.is_persisted_message_user, bot.is_vip_member, bot.is_pocket_habbo_user, 65537)
 
         self._extension.send_to_client(packet)
 

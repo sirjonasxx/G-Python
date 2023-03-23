@@ -2,44 +2,82 @@ import socket
 import sys
 import threading
 from enum import Enum
+from typing import TypedDict, NotRequired, Callable
+
 from .hpacket import HPacket
 from .hmessage import HMessage, Direction
-import json
 
-MINIMUM_GEARTH_VERSION = "1.4.1"
+MINIMUM_GEARTH_VERSION: str = "1.4.1"
 
 
 class INCOMING_MESSAGES(Enum):
-    ON_DOUBLE_CLICK = 1
-    INFO_REQUEST = 2
-    PACKET_INTERCEPT = 3
-    FLAGS_CHECK = 4
-    CONNECTION_START = 5
-    CONNECTION_END = 6
-    PACKET_TO_STRING_RESPONSE = 20
-    STRING_TO_PACKET_RESPONSE = 21
-    INIT = 7
+    ON_DOUBLE_CLICK: int = 1
+    INFO_REQUEST: int = 2
+    PACKET_INTERCEPT: int = 3
+    FLAGS_CHECK: int = 4
+    CONNECTION_START: int = 5
+    CONNECTION_END: int = 6
+    PACKET_TO_STRING_RESPONSE: int = 20
+    STRING_TO_PACKET_RESPONSE: int = 21
+    INIT: int = 7
 
 
 class OUTGOING_MESSAGES(Enum):
-    EXTENSION_INFO = 1
-    MANIPULATED_PACKET = 2
-    REQUEST_FLAGS = 3
-    SEND_MESSAGE = 4
-    PACKET_TO_STRING_REQUEST = 20
-    STRING_TO_PACKET_REQUEST = 21
-    EXTENSION_CONSOLE_LOG = 98
+    EXTENSION_INFO: int = 1
+    MANIPULATED_PACKET: int = 2
+    REQUEST_FLAGS: int = 3
+    SEND_MESSAGE: int = 4
+    PACKET_TO_STRING_REQUEST: int = 20
+    STRING_TO_PACKET_REQUEST: int = 21
+    EXTENSION_CONSOLE_LOG: int = 98
 
 
-EXTENSION_SETTINGS_DEFAULT = {"use_click_trigger": False, "can_leave": True, "can_delete": True}
+class InterceptMethod(Enum):
+    DEFAULT: str = 'default'
+    ASYNC: str = 'async'
+    ASYNC_MODIFY: str = 'async_modify'
+
+
+class ConsoleColour(Enum):
+    GREY: str = 'grey'
+    LIGHTGREY: str = 'lightgrey'
+    YELLOW: str = 'yellow'
+    ORANGE: str = 'orange'
+    WHITE: str = 'white'
+    PURPLE: str = 'purple'
+    BROWN: str = 'brown'
+    PINK: str = 'pink'
+    RED: str = 'red'
+    BLACK: str = 'black'
+    BLUE: str = 'blue'
+    CYAN: str = 'cyan'
+    GREEN: str = 'green'
+    DARK_GREEN: str = 'darkergreen'
+
+
+PORT_FLAG: list[str] = ["--port", "-p"]
+FILE_FLAG: list[str] = ["--filename", "-f"]
+COOKIE_FLAG: list[str] = ["--auth-token", "-c"]
+
+
+class ExtensionInfo(TypedDict):
+    title: str
+    description: str
+    version: str
+    author: str
+
+
+class ExtensionSettings(TypedDict):
+    use_click_trigger: NotRequired[bool]
+    can_leave: NotRequired[bool]
+    can_delete: NotRequired[bool]
+
+
+EXTENSION_SETTINGS_DEFAULT: ExtensionSettings = {"use_click_trigger": False, "can_leave": True, "can_delete": True}
 EXTENSION_INFO_REQUIRED_FIELDS = ["title", "description", "version", "author"]
 
-PORT_FLAG = ["--port", "-p"]
-FILE_FLAG = ["--filename", "-f"]
-COOKIE_FLAG = ["--auth-token", "-c"]
 
-
-def fill_settings(settings, defaults):
+def fill_settings(settings: ExtensionSettings, defaults: ExtensionSettings):
     if settings is None:
         return defaults.copy()
 
@@ -51,7 +89,7 @@ def fill_settings(settings, defaults):
     return settings
 
 
-def get_argument(args, flags):
+def get_argument(args: list[str], flags: list[str]):
     if type(flags) == str:
         flags = [flags]
 
@@ -65,9 +103,11 @@ def get_argument(args, flags):
 
 
 class Extension:
-    def __init__(self, extension_info, args, extension_settings=None, silent=False):
+    def __init__(self, extension_info: ExtensionInfo, args: list[str],
+                 extension_settings: None | ExtensionSettings = None, silent: bool = False):
         if not silent:
-            print("WARNING: This version of G-Python requires G-Earth >= {}".format(MINIMUM_GEARTH_VERSION), file=sys.stderr)
+            print("WARNING: This version of G-Python requires G-Earth >= {}".format(MINIMUM_GEARTH_VERSION),
+                  file=sys.stderr)
 
         extension_settings = fill_settings(extension_settings, EXTENSION_SETTINGS_DEFAULT)
 
@@ -109,7 +149,7 @@ class Extension:
         self.__manipulation_event = threading.Event()
         self.__manipulate_messages = []
 
-    def __read_gearth_packet(self):
+    def __read_gearth_packet(self) -> HPacket:
         write_pos = 0
 
         length_buffer = bytearray(4)
@@ -130,7 +170,7 @@ class Extension:
 
         return HPacket.from_bytes(packet_buffer)
 
-    def __packet_manipulation_thread(self):
+    def __packet_manipulation_thread(self) -> None:
         while not self.is_closed():
             habbo_message = None
             while habbo_message is None and not self.is_closed():
@@ -162,9 +202,9 @@ class Extension:
                     if elem['Hash'] is not None:
                         potential_intercept_ids.add(elem['Hash'])
 
-            for id in potential_intercept_ids:
-                if id in self.__intercept_listeners[habbo_message.direction]:
-                    for func in self.__intercept_listeners[habbo_message.direction][id]:
+            for identifier in potential_intercept_ids:
+                if identifier in self.__intercept_listeners[habbo_message.direction]:
+                    for func in self.__intercept_listeners[habbo_message.direction][identifier]:
                         func(habbo_message)
                         habbo_packet.reset()
 
@@ -172,7 +212,7 @@ class Extension:
             response_packet.append_string(repr(habbo_message), head=4, encoding='iso-8859-1')
             self.__send_to_stream(response_packet)
 
-    def __connection_thread(self):
+    def __connection_thread(self) -> None:
         t = threading.Thread(target=self.__packet_manipulation_thread)
         t.start()
 
@@ -229,7 +269,7 @@ class Extension:
                 self.__raise_event('init')
                 self.write_to_console(
                     'g_python extension "{}" sucessfully initialized'.format(self._extension_info['title']),
-                    'green',
+                    ConsoleColour.GREEN,
                     False
                 )
 
@@ -259,16 +299,16 @@ class Extension:
                 self.__response = HPacket.reconstruct_from_java(packet_string)
                 self.__response_barrier.wait()
 
-    def __parse_packet_infos(self, packet : HPacket):
+    def __parse_packet_infos(self, packet: HPacket) -> None:
         incoming = {}
         outgoing = {}
 
         length = packet.read_int()
         for _ in range(length):
             headerId, hash, name, structure, isOutgoing, source = packet.read('isssBs')
-            name = name if name is not 'NULL' else None
-            hash = hash if hash is not 'NULL' else None
-            structure = structure if structure is not 'NULL' else None
+            name = name if name != 'NULL' else None
+            hash = hash if hash != 'NULL' else None
+            structure = structure if structure != 'NULL' else None
 
             elem = {'Id': headerId, 'Name': name, 'Hash': hash, 'Structure': structure, 'Source': source}
 
@@ -289,22 +329,21 @@ class Extension:
 
         self.packet_infos = {Direction.TO_CLIENT: incoming, Direction.TO_SERVER: outgoing}
 
-
-    def __send_to_stream(self, packet):
+    def __send_to_stream(self, packet: HPacket) -> None:
         self.__stream_lock.acquire()
         self.__sock.send(packet.bytearray)
         self.__stream_lock.release()
 
-    def __callbacks(self, callbacks):
+    def __callbacks(self, callbacks: list[Callable[[], None]]) -> None:
         for func in callbacks:
             func()
 
-    def __raise_event(self, event_name):
+    def __raise_event(self, event_name: str) -> None:
         if event_name in self.__events:
             t = threading.Thread(target=self.__callbacks, args=(self.__events[event_name],))
             t.start()
 
-    def __send(self, direction, packet: HPacket):
+    def __send(self, direction: Direction, packet: HPacket) -> bool:
         if not self.is_closed():
 
             old_settings = None
@@ -312,7 +351,7 @@ class Extension:
                 old_settings = (packet.header_id(), packet.is_edited, packet.incomplete_identifier)
                 packet.fill_id(direction, self)
 
-            if self.connection_info == None:
+            if self.connection_info is None:
                 self.__lost_packets += 1
                 print("Could not send packet because G-Earth isn't connected to a client", file=sys.stderr)
                 return False
@@ -341,13 +380,13 @@ class Extension:
             self.__lost_packets += 1
             return False
 
-    def is_closed(self):
+    def is_closed(self) -> bool:
         """
         :return: true if no extension isn't connected with G-Earth
         """
         return self.__sock is None or self.__sock.fileno() == -1
 
-    def send_to_client(self, packet):
+    def send_to_client(self, packet: HPacket | str) -> bool:
         """
         Sends a message to the client
         :param packet: a HPacket() or a string representation
@@ -355,9 +394,9 @@ class Extension:
 
         if type(packet) is str:
             packet = self.string_to_packet(packet)
-        self.__send(Direction.TO_CLIENT, packet)
+        return self.__send(Direction.TO_CLIENT, packet)
 
-    def send_to_server(self, packet):
+    def send_to_server(self, packet: HPacket | str) -> bool:
         """
         Sends a message to the server
         :param packet: a HPacket() or a string representation
@@ -365,9 +404,9 @@ class Extension:
 
         if type(packet) is str:
             packet = self.string_to_packet(packet)
-        self.__send(Direction.TO_SERVER, packet)
+        return self.__send(Direction.TO_SERVER, packet)
 
-    def on_event(self, event_name: str, func):
+    def on_event(self, event_name: str, func: Callable) -> None:
         """
         implemented event names: double_click, connection_start, connection_end,init. When this
         even occurs, a callback is being done to "func"
@@ -377,11 +416,12 @@ class Extension:
         else:
             self.__events[event_name] = [func]
 
-    def intercept(self, direction: Direction, callback, id=-1, mode='default'):
+    def intercept(self, direction: Direction, callback: Callable[[HMessage], None], identifier: int | str = -1,
+                  mode: InterceptMethod = InterceptMethod.DEFAULT) -> None:
         """
         :param direction: Direction.TOCLIENT or Direction.TOSERVER
         :param callback: function that takes HMessage as an argument
-        :param id: header_id / hash / name
+        :param identifier: header_id / hash / name
         :param mode: can be: * default (blocking)
                              * async (async, can't modify packet, doesn't disturb packet flow)
                              * async_modify (async, can modify, doesn't block other packets, disturbs packet flow)
@@ -390,30 +430,32 @@ class Extension:
         original_callback = callback
 
         if mode == 'async':
-            def new_callback(hmessage : HMessage):
+            def new_callback(hmessage: HMessage) -> None:
                 copy = HMessage(hmessage.packet, hmessage.direction, hmessage._index, hmessage.is_blocked)
                 t = threading.Thread(target=original_callback, args=[copy])
                 t.start()
+
             callback = new_callback
 
         if mode == 'async_modify':
-            def callback_send(hmessage : HMessage):
+            def callback_send(hmessage: HMessage) -> None:
                 original_callback(hmessage)
                 if not hmessage.is_blocked:
                     self.__send(hmessage.direction, hmessage.packet)
 
-            def new_callback(hmessage : HMessage):
+            def new_callback(hmessage: HMessage) -> None:
                 hmessage.is_blocked = True
                 copy = HMessage(hmessage.packet, hmessage.direction, hmessage._index, False)
                 t = threading.Thread(target=callback_send, args=[copy])
                 t.start()
+
             callback = new_callback
 
-        if id not in self.__intercept_listeners[direction]:
-            self.__intercept_listeners[direction][id] = []
-        self.__intercept_listeners[direction][id].append(callback)
+        if identifier not in self.__intercept_listeners[direction]:
+            self.__intercept_listeners[direction][identifier] = []
+        self.__intercept_listeners[direction][identifier].append(callback)
 
-    def remove_intercept(self, id=-1):
+    def remove_intercept(self, id: int | str = -1) -> None:
         """
         Clear intercepts per id or all of them when none is given
         """
@@ -425,9 +467,9 @@ class Extension:
         else:
             for direction in self.__intercept_listeners:
                 if id in self.__intercept_listeners[direction]:
-                    del self.__intercept_listeners[direction][id]        
+                    del self.__intercept_listeners[direction][id]
 
-    def start(self):
+    def start(self) -> None:
         """
         Tries to set up a connection with G-Earth
         """
@@ -444,7 +486,7 @@ class Extension:
             raise Exception("Attempted to run already-running extension")
         self.__start_lock.release()
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Aborts an existing connection with G-Earth
         """
@@ -453,7 +495,7 @@ class Extension:
         else:
             raise Exception("Attempted to close extension that wasn't running")
 
-    def write_to_console(self, text, color='black', mention_title=True):
+    def write_to_console(self, text, color: ConsoleColour = ConsoleColour.BLACK, mention_title: bool = True) -> None:
         """
         Writes a message to the G-Earth console
         """
@@ -461,7 +503,7 @@ class Extension:
         packet = HPacket(OUTGOING_MESSAGES.EXTENSION_CONSOLE_LOG.value, message)
         self.__send_to_stream(packet)
 
-    def __await_response(self, request):
+    def __await_response(self, request: HPacket) -> str | list[str] | HPacket:
         self.__request_lock.acquire()
         self.__send_to_stream(request)
         self.__response_barrier.wait()
@@ -470,23 +512,23 @@ class Extension:
         self.__request_lock.release()
         return result
 
-    def packet_to_string(self, packet: HPacket):
+    def packet_to_string(self, packet: HPacket) -> str:
         request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
 
         return self.__await_response(request)[0]
 
-    def packet_to_expression(self, packet: HPacket):
+    def packet_to_expression(self, packet: HPacket) -> str:
         request = HPacket(OUTGOING_MESSAGES.PACKET_TO_STRING_REQUEST.value)
         request.append_string(repr(packet), 4, 'iso-8859-1')
 
         return self.__await_response(request)[1]
 
-    def string_to_packet(self, string):
+    def string_to_packet(self, string: str) -> HPacket:
         request = HPacket(OUTGOING_MESSAGES.STRING_TO_PACKET_REQUEST.value)
         request.append_string(string, 4)
 
         return self.__await_response(request)
 
-    def request_flags(self):
+    def request_flags(self) -> list[str]:
         return self.__await_response(HPacket(OUTGOING_MESSAGES.REQUEST_FLAGS.value))
