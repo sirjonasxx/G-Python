@@ -4,6 +4,23 @@ from typing import Self
 from g_python.hpacket import HPacket
 
 
+class HClientHost(Enum):
+    BRAZIL: "game-br.habbo.com"
+    GERMANY: "game-de.habbo.com"
+    SPAIN: "game-es.habbo.com"
+    FINLAND: "game-fi.habbo.com"
+    FRANCE: "game-fr.habbo.com"
+    ITALY: "game-it.habbo.com"
+    NETHERLANDS: "game-nl.habbo.com"
+    TURKEY: "game-tr.habbo.com"
+    UNITED_STATES: "game-us.habbo.com"
+    SANDBOX: "game-s2.habbo.com"
+
+class HGroupMode(Enum):
+    OPEN: 0
+    ADMINAPPROVAL: 1
+    CLOSED: 2
+
 class HGroupMode(IntEnum):
     OPEN = 0
     ADMINAPPROVAL = 1
@@ -472,3 +489,56 @@ class HNavigatorSearchResult:
                 return "id: {}, roomname: {}, door_mode: {}, users: {}/{}, description: {}".format(
                     self.flat_id, self.room_name, self.door_mode.name, self.user_count, self.max_user_count,
                     self.description)
+
+class HHeightMap:
+    def __init__(self, packet):
+        self.width, tileCount = packet.read('ii')
+        self.height = int(tileCount / self.width)
+        self.tiles = [packet.read_short() for _ in range(tileCount)]
+
+    def coords_to_index(self, x, y):
+        return int(y * self.width + x)
+
+    def index_to_coords(self, index):
+        y = int(index % self.width)
+        x = int((index - y) / self.width)
+        return x, y
+
+    def get_tile_value(self, x, y):
+        return self.tiles[self.coords_to_index(x, y)]
+
+    def are_valid_coords(self, x, y):
+        return 0 <= x < self.width and 0 <= y < self.height
+
+    def get_tile_height(self, x, y):
+        if not self.are_valid_coords(x, y):
+            return -1
+        value = self.get_tile_value(x, y)
+        if value < 0:
+            return -1
+        return (value & 16383) / 256
+
+    def is_room_tile(self, x, y):
+        if not self.are_valid_coords(x, y):
+            return False
+        value = self.get_tile_value(x, y)
+        return value >= 0
+
+    def is_stacking_blocked(self, x, y):
+        if not self.are_valid_coords(x, y):
+            return -1
+        value = self.get_tile_value(x, y)
+        return (value & 16384) > 0
+
+    def get_tile(self, x, y):
+        return {
+            'x': x,
+            'y': y,
+            'tile_value': self.get_tile_value(x, y),
+            'is_room_tile': self.is_room_tile(x, y),
+            'tile_height': self.get_tile_height(x, y),
+            'is_stacking_blocked': self.is_stacking_blocked(x, y)
+        }
+
+    def get_tiles(self):
+        return [self.get_tile(*self.index_to_coords(index)) for index in range(len(self.tiles))]
