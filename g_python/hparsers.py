@@ -1,25 +1,21 @@
 from enum import IntEnum, StrEnum
-from typing import Self
+from typing import Self, TypedDict
 
 from g_python.hpacket import HPacket
 
 
-class HClientHost(Enum):
-    BRAZIL: "game-br.habbo.com"
-    GERMANY: "game-de.habbo.com"
-    SPAIN: "game-es.habbo.com"
-    FINLAND: "game-fi.habbo.com"
-    FRANCE: "game-fr.habbo.com"
-    ITALY: "game-it.habbo.com"
-    NETHERLANDS: "game-nl.habbo.com"
-    TURKEY: "game-tr.habbo.com"
-    UNITED_STATES: "game-us.habbo.com"
-    SANDBOX: "game-s2.habbo.com"
+class HClientHost(StrEnum):
+    BRAZIL = "game-br.habbo.com"
+    GERMANY = "game-de.habbo.com"
+    SPAIN = "game-es.habbo.com"
+    FINLAND = "game-fi.habbo.com"
+    FRANCE = "game-fr.habbo.com"
+    ITALY = "game-it.habbo.com"
+    NETHERLANDS = "game-nl.habbo.com"
+    TURKEY = "game-tr.habbo.com"
+    UNITED_STATES = "game-us.habbo.com"
+    SANDBOX = "game-s2.habbo.com"
 
-class HGroupMode(Enum):
-    OPEN: 0
-    ADMINAPPROVAL: 1
-    CLOSED: 2
 
 class HGroupMode(IntEnum):
     OPEN = 0
@@ -283,8 +279,8 @@ class HFriend:
     def parse_from_update(cls, packet: HPacket) -> list[Self]:
         categories = {}
         for _ in range(packet.read_int()):
-            id = packet.read_int()
-            categories[id] = packet.read_string()
+            cat_id = packet.read_int()
+            categories[cat_id] = packet.read_string()
 
         friends = [HFriend(packet) for _ in range(packet.read_int())]
 
@@ -350,8 +346,8 @@ class HFloorItem:
     def parse(cls, packet: HPacket) -> list[Self]:
         owners = {}
         for _ in range(packet.read_int()):
-            id = packet.read_int()
-            owners[id] = packet.read_string()
+            owner_id = packet.read_int()
+            owners[owner_id] = packet.read_string()
 
         furnis = [HFloorItem(packet) for _ in range(packet.read_int())]
         for furni in furnis:
@@ -366,7 +362,9 @@ class HGroup:
             self.is_favorite, self.owner_id, self.has_forum = packet.read('issssBiB')
 
     def __str__(self) -> str:
-        return f"id: {self.id}, name: {self.name}, badge_code: {self.badge_code}, primary_color: {self.primary_color}, secondary_color: {self.secondary_color}, is_favorite: {self.is_favorite}, owner_id: {self.owner_id}, has_forum: {self.has_forum}"
+        return f"id: {self.id}, name: {self.name}, badge_code: {self.badge_code}, " \
+               f"primary_color: {self.primary_color}, secondary_color: {self.secondary_color}, " \
+               f"is_favorite: {self.is_favorite}, owner_id: {self.owner_id}, has_forum: {self.has_forum}"
 
 
 class HUserProfile:
@@ -394,8 +392,8 @@ class HWallItem:
     def parse(cls, packet: HPacket) -> list[Self]:
         owners = {}
         for _ in range(packet.read_int()):
-            id = packet.read_int()
-            owners[id] = packet.read_string()
+            owner_id = packet.read_int()
+            owners[owner_id] = packet.read_string()
 
         furnis = [HWallItem(packet) for _ in range(packet.read_int())]
         for furni in furnis:
@@ -405,14 +403,14 @@ class HWallItem:
 
 
 class HWallUpdate:
-    '''
+    """
         def update(p):
             wall = HWallUpdate(p.packet)
             print(wall.widthX, wall.widthY, wall.lengthX, wall.lengthY)
             # id / cord / rotation / widthX / widthY / lengthX / lengthY
 
         ext.intercept(Direction.TO_SERVER, update, 'MoveWallItem')
-    '''
+    """
 
     def __init__(self, packet: HPacket):
         self.id, self.cord = packet.read('is')
@@ -443,7 +441,7 @@ class HInventoryItem:
 
     @classmethod
     def parse(cls, packet: HPacket) -> list[Self]:
-        total, current = packet.read('ii')
+        _total, _current = packet.read('ii')
         return [HInventoryItem(packet) for _ in range(packet.read_int())]
 
 
@@ -470,47 +468,57 @@ class HNavigatorSearchResult:
 
                 self.tags = [packet.read_string() for _ in range(packet.read_int())]
 
-                multiUse = packet.read_int()
+                multi_use = packet.read_int()
 
-                if (multiUse & 1) > 0:
+                if (multi_use & 1) > 0:
                     self.official_room_pic_ref = packet.read_string()
 
-                if (multiUse & 2) > 0:
+                if (multi_use & 2) > 0:
                     self.group_id, self.group_name, self.group_badge_code = packet.read('iss')
 
-                if (multiUse & 4) > 0:
+                if (multi_use & 4) > 0:
                     self.room_ad_name, self.room_ad_description, self.room_ad_expires_in_min = packet.read('ssi')
 
-                self.show_owner = (multiUse & 8) > 0
-                self.allow_pets = (multiUse & 16) > 0
-                self.display_room_entry_ad = (multiUse & 32) > 0
+                self.show_owner = (multi_use & 8) > 0
+                self.allow_pets = (multi_use & 16) > 0
+                self.display_room_entry_ad = (multi_use & 32) > 0
 
             def __str__(self) -> str:
                 return "id: {}, roomname: {}, door_mode: {}, users: {}/{}, description: {}".format(
                     self.flat_id, self.room_name, self.door_mode.name, self.user_count, self.max_user_count,
                     self.description)
 
+
+class HHeightMapTile(TypedDict):
+    x: int
+    y: int
+    tile_value: int
+    is_room_tile: bool
+    tile_height: float
+    is_stacking_blocked: bool
+
+
 class HHeightMap:
-    def __init__(self, packet):
+    def __init__(self, packet: HPacket):
         self.width, tileCount = packet.read('ii')
         self.height = int(tileCount / self.width)
         self.tiles = [packet.read_short() for _ in range(tileCount)]
 
-    def coords_to_index(self, x, y):
+    def coords_to_index(self, x: int, y: int) -> int:
         return int(y * self.width + x)
 
-    def index_to_coords(self, index):
+    def index_to_coords(self, index: int) -> (int, int):
         y = int(index % self.width)
         x = int((index - y) / self.width)
         return x, y
 
-    def get_tile_value(self, x, y):
+    def get_tile_value(self, x: int, y: int) -> int:
         return self.tiles[self.coords_to_index(x, y)]
 
-    def are_valid_coords(self, x, y):
+    def are_valid_coords(self, x: int, y: int) -> bool:
         return 0 <= x < self.width and 0 <= y < self.height
 
-    def get_tile_height(self, x, y):
+    def get_tile_height(self, x: int, y: int) -> float:
         if not self.are_valid_coords(x, y):
             return -1
         value = self.get_tile_value(x, y)
@@ -518,19 +526,19 @@ class HHeightMap:
             return -1
         return (value & 16383) / 256
 
-    def is_room_tile(self, x, y):
+    def is_room_tile(self, x: int, y: int) -> bool:
         if not self.are_valid_coords(x, y):
             return False
         value = self.get_tile_value(x, y)
         return value >= 0
 
-    def is_stacking_blocked(self, x, y):
+    def is_stacking_blocked(self, x: int, y: int) -> bool:
         if not self.are_valid_coords(x, y):
-            return -1
+            return False
         value = self.get_tile_value(x, y)
         return (value & 16384) > 0
 
-    def get_tile(self, x, y):
+    def get_tile(self, x: int, y: int) -> HHeightMapTile:
         return {
             'x': x,
             'y': y,
@@ -540,5 +548,5 @@ class HHeightMap:
             'is_stacking_blocked': self.is_stacking_blocked(x, y)
         }
 
-    def get_tiles(self):
+    def get_tiles(self) -> list[HHeightMapTile]:
         return [self.get_tile(*self.index_to_coords(index)) for index in range(len(self.tiles))]

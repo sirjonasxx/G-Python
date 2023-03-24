@@ -1,6 +1,6 @@
 from typing import Callable
 
-from .gextension import Extension
+from .gextension import Extension, ConsoleColour
 from .hmessage import HMessage, Direction
 from .hpacket import HPacket
 from .hparsers import HEntity, HFloorItem, HWallItem, HInventoryItem, HUserUpdate
@@ -9,15 +9,15 @@ import sys
 
 def validate_headers(ext: Extension, parser_name: str, headers: list[tuple[int | str, Direction]]):
     def validate():
-        for (header, dir) in headers:
+        for (header, direction) in headers:
             if header is None:
                 error = "Missing headerID/Name in '{}'".format(parser_name)
                 print(error, file=sys.stderr)
-                ext.write_to_console(error, "red")
-            if isinstance(header, str) and (ext.packet_infos is None or header not in ext.packet_infos[dir]):
+                ext.write_to_console(error, ConsoleColour.RED)
+            if isinstance(header, str) and (ext.packet_infos is None or header not in ext.packet_infos[direction]):
                 error = "Invalid headerID/Name in '{}': {}".format(parser_name, header)
                 print(error, file=sys.stderr)
-                ext.write_to_console(error, "red")
+                ext.write_to_console(error, ConsoleColour.RED)
 
     ext.on_event('connection_start', validate)
     if ext.connection_info is not None:
@@ -88,10 +88,9 @@ class RoomUsers:
         self.__ext.send_to_server(HPacket(self.__request_id))
 
 
-# TODO continue typing
 class RoomFurni:
-    def __init__(self, ext: Extension, floor_items='Objects', wall_items='Items',
-                 request='GetHeightMap'):
+    def __init__(self, ext: Extension, floor_items: str | int = 'Objects', wall_items: str | int = 'Items',
+                 request: str | int = 'GetHeightMap'):
         validate_headers(ext, 'RoomFurni', [
             (floor_items, Direction.TO_CLIENT),
             (wall_items, Direction.TO_CLIENT),
@@ -108,30 +107,31 @@ class RoomFurni:
         ext.intercept(Direction.TO_CLIENT, self.__floor_furni_load, floor_items)
         ext.intercept(Direction.TO_CLIENT, self.__wall_furni_load, wall_items)
 
-    def __floor_furni_load(self, message):
+    def __floor_furni_load(self, message: HMessage) -> None:
         self.floor_furni = HFloorItem.parse(message.packet)
         if self.__callback_floor_furni is not None:
             self.__callback_floor_furni(self.floor_furni)
 
-    def __wall_furni_load(self, message):
+    def __wall_furni_load(self, message: HMessage) -> None:
         self.wall_furni = HWallItem.parse(message.packet)
         if self.__callback_wall_furni is not None:
             self.__callback_wall_furni(self.wall_furni)
 
-    def on_floor_furni_load(self, callback):
+    def on_floor_furni_load(self, callback: Callable[[list[HFloorItem]], None]) -> None:
         self.__callback_floor_furni = callback
 
-    def on_wall_furni_load(self, callback):
+    def on_wall_furni_load(self, callback: Callable[[list[HWallItem]], None]) -> None:
         self.__callback_wall_furni = callback
 
-    def request(self):
+    def request(self) -> None:
         self.floor_furni = []
         self.wall_furni = []
         self.__ext.send_to_server(HPacket(self.__request_id))
 
 
 class Inventory:
-    def __init__(self, ext: Extension, inventory_items='FurniList', request='RequestFurniInventory'):
+    def __init__(self, ext: Extension, inventory_items: str | int = 'FurniList',
+                 request: str | int = 'RequestFurniInventory'):
         validate_headers(ext, 'Inventory', [
             (inventory_items, Direction.TO_CLIENT),
             (request, Direction.TO_SERVER)])
@@ -147,7 +147,7 @@ class Inventory:
 
         ext.intercept(Direction.TO_CLIENT, self.__user_inventory_load, inventory_items)
 
-    def __user_inventory_load(self, message: HMessage):
+    def __user_inventory_load(self, message: HMessage) -> None:
         packet = message.packet
         total, current = packet.read('ii')
         packet.reset()
@@ -169,8 +169,8 @@ class Inventory:
 
             self.__inventory_load_callback(self.inventory_items)
 
-    def request(self):
+    def request(self) -> None:
         self.__ext.send_to_server(HPacket(self.__request_id))
 
-    def on_inventory_load(self, callback):
+    def on_inventory_load(self, callback: Callable[[list[HInventoryItem]], None]) -> None:
         self.__inventory_load_callback = callback

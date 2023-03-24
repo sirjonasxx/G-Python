@@ -84,8 +84,11 @@ class HPacket:
         return self.read_int(0)
 
     def __str__(self) -> str:
-        return "(id:{}, length:{}) -> {}".format(self.header_id() if not self.is_incomplete_packet() else self.incomplete_identifier,
-                                                 len(self), bytes(self))
+        return "(id:{}, length:{}) -> {}".format(
+            self.header_id() if not self.is_incomplete_packet() else self.incomplete_identifier,
+            len(self),
+            bytes(self)
+        )
 
     def is_incomplete_packet(self) -> bool:
         return self.incomplete_identifier is not None
@@ -146,8 +149,8 @@ class HPacket:
             index = self.read_index
             self.read_index += head + int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
 
-        len = int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
-        return self.bytearray[index + head:index + head + len].decode(encoding)
+        length = int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
+        return self.bytearray[index + head:index + head + length].decode(encoding)
 
     def read_bytes(self, length: int, index: int | None = None) -> bytearray:
         if index is None:

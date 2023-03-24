@@ -1,48 +1,73 @@
 import random
-import threading
 import time
 from datetime import datetime
-from typing import Callable
+from typing import Callable, TypedDict, NotRequired
 
-from g_python.gextension import Extension
+from g_python.gextension import Extension, InterceptMethod
 from g_python.hdirection import Direction
 from g_python.hmessage import HMessage
 from g_python.hpacket import HPacket
 
 
-class HBotProfile:
-    settings = {
-        "id": random.randrange(1 << 30, 1 << 31),
-        "username": "Bot",
-        "gender": 1,
-        "is_following_allowed": False,
-        "figure": "hd-3704-29",
-        "motto": "Hey! I'm a bot.",
-        "category_id": 0,
-        "creation_date": datetime.today().strftime("%m-%d-%Y"),
-        "achievement_score": 1000,
-        "friend_count": 1,
-        "is_friend": True,
-        "is_requested_friend": False,
-        "is_online": True,
-        "is_persisted_message_user": True,
-        "is_vip_member": False,
-        "is_pocket_habbo_user": False,
-    }
+class HBotProfile(TypedDict):
+    id: NotRequired[int]
+    username: NotRequired[str]
+    gender: NotRequired[int]
+    is_following_allowed: NotRequired[bool]
+    figure: NotRequired[str]
+    motto: NotRequired[str]
+    category_id: NotRequired[int]
+    creation_date: NotRequired[str]
+    achievement_score: NotRequired[int]
+    friend_count: NotRequired[int]
+    is_friend: NotRequired[bool]
+    is_requested_friend: NotRequired[bool]
+    is_online: NotRequired[bool]
+    is_persisted_message_user: NotRequired[bool]
+    is_vip_member: NotRequired[bool]
+    is_pocket_habbo_user: NotRequired[bool]
 
-    def __init__(self, **kwargs) -> None:
-        for key, value in HBotProfile.settings.items():
-            setattr(self, key, value if key not in kwargs else kwargs[key])
+    # def __init__(self, **kwargs) -> None:
+    #     for key, value in HBotProfile.settings.items():
+    #         setattr(self, key, value if key not in kwargs else kwargs[key])
+
+
+DEFAULT_PROFILE: HBotProfile = {
+    "id": -1,
+    "username": "Bot",
+    "gender": 1,
+    "is_following_allowed": False,
+    "figure": "hd-3704-29",
+    "motto": "Hey! I'm a bot.",
+    "category_id": 0,
+    "creation_date": datetime.today().strftime("%m-%d-%Y"),
+    "achievement_score": 1000,
+    "friend_count": 1,
+    "is_friend": True,
+    "is_requested_friend": False,
+    "is_online": True,
+    "is_persisted_message_user": True,
+    "is_vip_member": False,
+    "is_pocket_habbo_user": False,
+}
+
+
+def fill_profile(profile: HBotProfile) -> None:
+    profile.setdefault("id", random.randrange(1 << 30, 1 << 31))
+    for key in DEFAULT_PROFILE:
+        if key != "id":
+            profile.setdefault(key, DEFAULT_PROFILE[key])
 
 
 # Thanks to denio4321 and sirjonasxx I got some ideas from them
 class ConsoleBot:
     def __init__(
-        self, extension: Extension, prefix: str = ":", bot_settings: HBotProfile = None
+            self, extension: Extension, prefix: str = ":", bot_settings: HBotProfile | None = None
     ) -> None:
         self._extension = extension
         self._prefix = prefix
-        self._bot_settings = HBotProfile() if bot_settings is None else bot_settings
+        self._bot_settings = {} if bot_settings is None else bot_settings
+        fill_profile(self._bot_settings)
         self._commands = {}
 
         self._chat_opened = False
@@ -50,7 +75,7 @@ class ConsoleBot:
 
         extension.intercept(Direction.TO_SERVER, self.should_open_chat)
         extension.intercept(
-            Direction.TO_CLIENT, self.on_friend_list, "FriendListFragment", mode="async"
+            Direction.TO_CLIENT, self.on_friend_list, "FriendListFragment", mode=InterceptMethod.ASYNC
         )
         extension.intercept(Direction.TO_SERVER, self.on_send_message, "SendMsg")
         extension.intercept(
@@ -65,7 +90,7 @@ class ConsoleBot:
                 self._once_per_connection = True
                 self.create_chat()
 
-    def on_friend_list(self, ignored_hmessage: HMessage) -> None:
+    def on_friend_list(self, _ignored_hmessage: HMessage) -> None:
         if not self._once_per_connection:
             self._once_per_connection = True
 
@@ -85,25 +110,26 @@ class ConsoleBot:
                 self._commands[raw_message]()
 
     def on_get_profile(self, hmessage: HMessage) -> None:
-        if hmessage.packet.read_int() == self._bot_settings.id:
+        if hmessage.packet.read_int() == self._bot_settings["id"]:
             bot = self._bot_settings
 
-            packet = HPacket("ExtendedProfile", bot.id, bot.username, bot.figure, bot.motto, bot.creation_date,
-                             bot.achievement_score, bot.friend_count, bot.is_friend, bot.is_requested_friend,
-                             bot.is_online, 0, -255, True)
+            packet = HPacket("ExtendedProfile", bot["id"], bot["username"], bot["figure"], bot["motto"],
+                             bot["creation_date"], bot["achievement_score"], bot["friend_count"], bot["is_friend"],
+                             bot["is_requested_friend"], bot["is_online"], 0, -255, True)
 
             self._extension.send_to_client(packet)
 
             self._extension.send_to_client(
-                HPacket("HabboUserBadges", bot.id, 1, 1, "BOT")
+                HPacket("HabboUserBadges", bot["id"], 1, 1, "BOT")
             )
 
     def create_chat(self) -> None:
         bot = self._bot_settings
 
-        packet = HPacket("FriendListUpdate", 0, 1, False, False, "", bot.id, bot.username, bot.gender, bot.is_online,
-                         bot.is_following_allowed, bot.figure, bot.category_id, bot.motto, 0,
-                         bot.is_persisted_message_user, bot.is_vip_member, bot.is_pocket_habbo_user, 65537)
+        packet = HPacket("FriendListUpdate", 0, 1, False, False, "", bot["id"], bot["username"], bot["gender"],
+                         bot["is_online"], bot["is_following_allowed"], bot["figure"], bot["category_id"],
+                         bot["motto"], 0, bot["is_persisted_message_user"], bot["is_vip_member"],
+                         bot["is_pocket_habbo_user"], 65537)
 
         self._extension.send_to_client(packet)
 
@@ -119,5 +145,5 @@ class ConsoleBot:
             HPacket("NewConsole", self._bot_settings.id, message, 0, "")
         )
 
-    def add_command(self, command: str, callback: Callable) -> None:
+    def add_command(self, command: str, callback: Callable[[], None]) -> None:
         self._commands[command] = callback

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class Direction(Enum):
-    TO_CLIENT: int = 0
-    TO_SERVER: int = 1
+class Direction(IntEnum):
+    TO_CLIENT = 0
+    TO_SERVER = 1
