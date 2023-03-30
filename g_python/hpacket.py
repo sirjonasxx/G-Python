@@ -1,31 +1,34 @@
+from typing import Self
+
+from .gextension import Extension
 from .hdirection import Direction
 
 
 class HPacket:
-    default_extension = None
+    default_extension: Extension | None = None
 
-    def __init__(self, id, *objects):
-        self.incomplete_identifier = None if (type(id) is int) else id
+    def __init__(self, identifier: int | str, *objects: str | int | bool | bytes):
+        self.incomplete_identifier = None if (type(identifier) is int) else identifier
 
         self.read_index = 6
         self.bytearray = bytearray(b'\x00\x00\x00\x02\xff\xff')
         if self.incomplete_identifier is None:
-            self.replace_short(4, id)
+            self.replace_short(4, identifier)
         self.is_edited = False
 
-        for object in objects:
-            if type(object) is str:
-                self.append_string(object)
-            if type(object) is int:
-                self.append_int(object)
-            if type(object) is bool:
-                self.append_bool(object)
-            if type(object) is bytes:
-                self.append_bytes(object)
+        for obj in objects:
+            if type(obj) is str:
+                self.append_string(obj)
+            if type(obj) is int:
+                self.append_int(obj)
+            if type(obj) is bool:
+                self.append_bool(obj)
+            if type(obj) is bytes:
+                self.append_bytes(obj)
 
         self.is_edited = False
 
-    def fill_id(self, direction: Direction, extension=None) -> bool:
+    def fill_id(self, direction: Direction, extension: Extension | None = None) -> bool:
         if self.incomplete_identifier is not None:
             if extension is None:
                 if self.default_extension is None:
@@ -43,16 +46,16 @@ class HPacket:
 
     # https://stackoverflow.com/questions/682504/what-is-a-clean-pythonic-way-to-have-multiple-constructors-in-python
     @classmethod
-    def from_bytes(cls, bytes):
+    def from_bytes(cls, byte_list: bytes) -> Self:
         obj = cls.__new__(cls)  # Does not call __init__
         super(HPacket, obj).__init__()  # Don't forget to call any polymorphic base class initializers
-        obj.bytearray = bytearray(bytes)
+        obj.bytearray = bytearray(byte_list)
         obj.read_index = 6
         obj.is_edited = False
         return obj
 
     @classmethod
-    def from_string(cls, string, extension=None):
+    def from_string(cls, string: str, extension: Extension | None = None) -> Self:
         if extension is None:
             if HPacket.default_extension is None:
                 raise Exception('No extension given for string <-> packet conversion')
@@ -61,7 +64,7 @@ class HPacket:
         return extension.string_to_packet(string)
 
     @classmethod
-    def reconstruct_from_java(cls, string):
+    def reconstruct_from_java(cls, string: str) -> Self:
         obj = cls.__new__(cls)
         super(HPacket, obj).__init__()
         obj.read_index = 6
@@ -71,23 +74,26 @@ class HPacket:
         obj.incomplete_identifier = None
         return obj
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return ('1' if self.is_edited else '0') + self.bytearray.decode("iso-8859-1")
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         return bytes(self.bytearray)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.read_int(0)
 
-    def __str__(self):
-        return "(id:{}, length:{}) -> {}".format(self.header_id() if not self.is_incomplete_packet() else self.incomplete_identifier,
-                                                 len(self), bytes(self))
+    def __str__(self) -> str:
+        return "(id:{}, length:{}) -> {}".format(
+            self.header_id() if not self.is_incomplete_packet() else self.incomplete_identifier,
+            len(self),
+            bytes(self)
+        )
 
     def is_incomplete_packet(self) -> bool:
         return self.incomplete_identifier is not None
 
-    def g_string(self, extension=None) -> str:
+    def g_string(self, extension: Extension | None = None) -> str:
         if extension is None:
             if HPacket.default_extension is None:
                 raise Exception('No extension given for packet <-> string conversion')
@@ -96,7 +102,7 @@ class HPacket:
 
         return extension.packet_to_string(self)
 
-    def g_expression(self, extension=None) -> str:
+    def g_expression(self, extension: Extension | None = None) -> str:
         if extension is None:
             if HPacket.default_extension is None:
                 raise Exception('No extension given for packet <-> string conversion')
@@ -138,32 +144,32 @@ class HPacket:
 
         return int.from_bytes(self.bytearray[index:index + 8], byteorder='big', signed=True)
 
-    def read_string(self, index=None, head=2, encoding='iso-8859-1') -> str:
+    def read_string(self, index=None, head: int = 2, encoding: str = 'iso-8859-1') -> str:
         if index is None:
             index = self.read_index
             self.read_index += head + int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
 
-        len = int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
-        return self.bytearray[index + head:index + head + len].decode(encoding)
+        length = int.from_bytes(self.bytearray[index:index + head], byteorder='big', signed=False)
+        return self.bytearray[index + head:index + head + length].decode(encoding)
 
-    def read_bytes(self, len, index=None) -> bytearray:
+    def read_bytes(self, length: int, index: int | None = None) -> bytearray:
         if index is None:
             index = self.read_index
-            self.read_index += len
+            self.read_index += length
 
-        return self.bytearray[index:index + len]
+        return self.bytearray[index:index + length]
 
-    def read_byte(self, index=None) -> int:
+    def read_byte(self, index: int | None = None) -> int:
         if index is None:
             index = self.read_index
             self.read_index += 1
 
         return self.bytearray[index]
 
-    def read_bool(self, index=None) -> bool:
+    def read_bool(self, index: int | None = None) -> bool:
         return self.read_byte(index) != 0
 
-    def read(self, structure) -> list:
+    def read(self, structure: str) -> list:
         read_methods = {
             'i': self.read_int,
             's': self.read_string,
@@ -174,23 +180,23 @@ class HPacket:
         }
         return [read_methods[value_type]() for value_type in structure]
 
-    def replace_int(self, index, value) -> None:
+    def replace_int(self, index: int, value: int) -> None:
         self.bytearray[index:index + 4] = value.to_bytes(4, byteorder='big', signed=True)
         self.is_edited = True
 
-    def replace_short(self, index, value) -> None:
+    def replace_short(self, index: int, value: int) -> None:
         self.bytearray[index:index + 2] = value.to_bytes(2, byteorder='big', signed=True)
         self.is_edited = True
 
-    def replace_long(self, index, value) -> None:
+    def replace_long(self, index: int, value: int) -> None:
         self.bytearray[index:index + 8] = value.to_bytes(8, byteorder='big', signed=False)
         self.is_edited = True
 
-    def replace_bool(self, index, value) -> None:
+    def replace_bool(self, index: int, value: bool) -> None:
         self.bytearray[index] = value
         self.is_edited = True
 
-    def replace_string(self, index, value, encoding='utf-8') -> None:
+    def replace_string(self, index: int, value: str, encoding: str = 'utf-8') -> None:
         old_len = self.read_short(index)
         part1 = self.bytearray[0:index]
         part3 = self.bytearray[index + 2 + old_len:]
@@ -203,37 +209,37 @@ class HPacket:
         self.fix_length()
         self.is_edited = True
 
-    def append_int(self, value):
+    def append_int(self, value: int) -> Self:
         self.bytearray.extend(value.to_bytes(4, byteorder='big', signed=True))
         self.fix_length()
         self.is_edited = True
         return self
 
-    def append_short(self, value):
+    def append_short(self, value: int) -> Self:
         self.bytearray.extend(value.to_bytes(2, byteorder='big', signed=True))
         self.fix_length()
         self.is_edited = True
         return self
 
-    def append_long(self, value):
+    def append_long(self, value: int) -> Self:
         self.bytearray.extend(value.to_bytes(8, byteorder='big', signed=False))
         self.fix_length()
         self.is_edited = True
         return self
 
-    def append_bytes(self, value):
+    def append_bytes(self, value: bytes) -> Self:
         self.bytearray.extend(value)
         self.fix_length()
         self.is_edited = True
         return self
 
-    def append_bool(self, value):
+    def append_bool(self, value: bool) -> Self:
         self.append_bytes(b'\x01' if value else b'\x00')
         self.fix_length()
         self.is_edited = True
         return self
 
-    def append_string(self, value, head=2, encoding='utf-8'):
+    def append_string(self, value: str, head: int = 2, encoding: str = 'utf-8'):
         b = value.encode(encoding)
         self.bytearray.extend(len(b).to_bytes(head, byteorder='big', signed=False) + b)
         self.fix_length()

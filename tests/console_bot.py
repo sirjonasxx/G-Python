@@ -19,7 +19,10 @@ def ping():
 
 
 # you don't need to initialize settings, just if you want to customize
-settings = HBotProfile(username="Custom Bot", motto="Custom Motto")
+settings: HBotProfile =  {
+    "username": "Custom Bot",
+    "motto": "Custom Motto"
+}
 
 bot = ConsoleBot(ext, prefix=":", bot_settings=settings)
 bot.add_command("ping", ping)
