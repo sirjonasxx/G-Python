@@ -175,6 +175,11 @@ class HPoint:
 
     def __repr__(self) -> str:
         return "HPoint({},{},{})".format(self.x, self.y, self.z)
+    
+    def __eq__(self, other) -> bool:
+        if isinstance(other, HPoint):
+            return self.x == other.x and self.y == other.y and self.z == other.z
+        return False
 
 
 class HUserUpdate:
