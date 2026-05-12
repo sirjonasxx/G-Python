@@ -179,16 +179,16 @@ class HPoint:
 
 class HUserUpdate:
     def __init__(self, packet: HPacket):
-        self.index, x, y, z, head, body, self.action = packet.read('iiisiis')
+        self.index, x, y, z, head, body, self.jumpingPower, self.action = packet.read('iiisiiis')
         self.tile = get_tile_from_coords(x, y, z)
         self.headFacing = HDirection(head)
         self.bodyFacing = HDirection(body)
         self.nextTile = self.predict_next_tile()
 
     def __str__(self):
-        return '<HUserUpdate> [{}] - X: {} - Y: {} - Z: {} - head {} - body {} - next tile {}' \
+        return '<HUserUpdate> [{}] - X: {} - Y: {} - Z: {} - head {} - body {} - next tile {} - jumping power {}' \
             .format(self.index, self.tile.x, self.tile.y, self.tile.z, self.headFacing.name, self.bodyFacing.name,
-                    self.nextTile)
+                    self.nextTile, self.jumpingPower)
 
     def predict_next_tile(self):
         actions = self.action.split('/mv ')
