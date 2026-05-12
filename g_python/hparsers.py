@@ -508,8 +508,8 @@ class HHeightMap:
         return int(y * self.width + x)
 
     def index_to_coords(self, index: int) -> (int, int):
-        y = int(index % self.width)
-        x = int((index - y) / self.width)
+        x = index % self.width
+        y = index // self.width
         return x, y
 
     def get_tile_value(self, x: int, y: int) -> int:
